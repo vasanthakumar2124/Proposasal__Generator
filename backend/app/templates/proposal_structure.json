@@ -1,0 +1,53 @@
+{
+  "sections": [
+
+    "cover_page",
+
+    "table_of_contents",
+
+    "executive_summary",
+
+    "about_company",
+
+    "client_understanding",
+
+    "requirement_analysis",
+
+    "proposed_solution",
+
+    "module_breakdown",
+
+    "user_journey",
+
+    "technology_stack",
+
+    "ai_architecture",
+
+    "system_architecture",
+
+    "database_design",
+
+    "security",
+
+    "methodology",
+
+    "timeline",
+
+    "deliverables",
+
+    "pricing",
+
+    "sla",
+
+    "support",
+
+    "terms",
+
+    "case_studies",
+
+    "team",
+
+    "conclusion"
+
+  ]
+}
