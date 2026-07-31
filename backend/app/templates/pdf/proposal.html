@@ -9,7 +9,9 @@
 </head>
 <body>
 
-<div class="running-header-left">{{ metadata.company_name or "" }}</div>
+<div class="running-header-left">
+  {% if metadata.company_logo %}<img src="{{ metadata.company_logo }}" class="header-logo" alt="">{% else %}{{ metadata.company_name or "" }}{% endif %}
+</div>
 <div class="running-header-right">CONFIDENTIAL</div>
 
 <div class="cover-page">
@@ -102,6 +104,31 @@
 {% if key == "module_breakdown" and module_breakdown %}
 <div id="sec-module_breakdown" class="section">
   <h2>Module Breakdown</h2>
+  {% if module_breakdown.standard_modules is defined or module_breakdown.custom_modules is defined %}
+  {% if module_breakdown.standard_modules %}
+  <h3>Standard Modules</h3>
+  <table>
+    <thead><tr><th>Module</th><th>Description</th></tr></thead>
+    <tbody>
+    {% for m in module_breakdown.standard_modules %}
+    <tr><td>{{ m.name or m.module_name or m }}</td><td>{{ m.description or "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if module_breakdown.custom_modules %}
+  <h3>Custom Modules</h3>
+  <p>Custom modules are built specifically for this project and billed separately from standard modules.</p>
+  <table>
+    <thead><tr><th>Module</th><th>Description</th></tr></thead>
+    <tbody>
+    {% for m in module_breakdown.custom_modules %}
+    <tr><td>{{ m.name or m.module_name or m }}</td><td>{{ m.description or "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% else %}
   <table>
     <thead><tr><th>Module</th><th>Description</th></tr></thead>
     <tbody>
@@ -110,6 +137,7 @@
     {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -127,9 +155,9 @@
 </div>
 {% endif %}
 
-{% if key == "diagrams" and (workflow_diagram_svg or architecture_diagram_svg or timeline_diagram_svg) %}
-<div id="sec-diagrams" class="section page-break">
-  <h2>Solution Architecture &amp; Workflow</h2>
+{% if key == "diagrams" and include_diagrams_appendix and (workflow_diagram_svg or architecture_diagram_svg or timeline_diagram_svg) %}
+<div id="sec-diagrams" class="section page-break appendix">
+  <h2 class="no-number">Appendix A: Solution Architecture &amp; Workflow</h2>
   {% if workflow_diagram_svg %}
   <h3>Solution Workflow</h3>
   <div class="diagram-container">
@@ -163,17 +191,29 @@
 {% endif %}
 
 {% if key == "timeline" and timeline %}
+{% set week_detail = timeline.phases and timeline.phases[0].output is defined %}
 <div id="sec-timeline" class="section">
   <h2>Timeline</h2>
   {% if timeline.phases %}
+  {% if week_detail %}
+  <table>
+    <thead><tr><th>Week</th><th>Scope</th><th>Modules Used</th><th>Output</th></tr></thead>
+    <tbody>
+    {% for phase in timeline.phases %}
+    <tr><td>{% if phase.duration_weeks %}{{ phase.duration_weeks }} weeks{% endif %}</td><td>{{ phase.scope or "" }}</td><td>{{ phase.modules_used|join(", ") if phase.modules_used else "" }}</td><td>{{ phase.output or "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
   <table>
     <thead><tr><th>Phase</th><th>Duration</th><th>Activities</th></tr></thead>
     <tbody>
     {% for phase in timeline.phases %}
-    <tr><td>{{ phase.name }}</td><td>{% if phase.duration_weeks %}{{ phase.duration_weeks }} weeks{% endif %}</td><td>{{ phase.activities|join(", ") }}</td></tr>
+    <tr><td>{{ phase.name }}</td><td>{% if phase.duration_weeks %}{{ phase.duration_weeks }} weeks{% endif %}</td><td>{{ phase.activities|join(", ") if phase.activities else "" }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
+  {% endif %}
   {% endif %}
   {% if timeline.milestones %}<h3>Milestones</h3><ul>{% for m in timeline.milestones %}<li>{{ m.event or m }}</li>{% endfor %}</ul>{% endif %}
 </div>
@@ -224,6 +264,21 @@
     </tbody>
   </table>
   {% endif %}
+</div>
+{% endif %}
+
+{% if key == "custom_development_charges" and custom_development_charges %}
+<div id="sec-custom_development_charges" class="section">
+  <h2>Custom Development Charges</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Cost</th></tr></thead>
+    <tbody>
+    {% for item in custom_development_charges %}
+    <tr><td>{{ item.name or item.item or item }}</td><td>{% if item.cost %}${{ "{:,.0f}".format(item.cost) }}{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Custom development work is billed separately after written approval.</p>
 </div>
 {% endif %}
 

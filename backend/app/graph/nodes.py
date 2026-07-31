@@ -36,11 +36,27 @@ def _merge_engine_sections(final: dict, business_context: dict) -> None:
 
     modules = (business_context.get("module_data") or {}).get("modules") or []
     if modules:
-        final["module_breakdown"] = [
-            {"module_name": m.get("name", ""), "description": m.get("description", "")}
-            for m in modules
-            if isinstance(m, dict)
-        ]
+        core = (business_context.get("module_data") or {}).get("core_modules") or []
+        advanced = (business_context.get("module_data") or {}).get("advanced_modules") or []
+        if core or advanced:
+            final["module_breakdown"] = {
+                "standard_modules": [
+                    {"module_name": m.get("name", ""), "description": m.get("description", "")}
+                    for m in core
+                    if isinstance(m, dict)
+                ],
+                "custom_modules": [
+                    {"module_name": m.get("name", ""), "description": m.get("description", "")}
+                    for m in advanced
+                    if isinstance(m, dict)
+                ],
+            }
+        else:
+            final["module_breakdown"] = [
+                {"module_name": m.get("name", ""), "description": m.get("description", "")}
+                for m in modules
+                if isinstance(m, dict)
+            ]
 
     members = (business_context.get("team_data") or {}).get("team_members") or []
     if members:
@@ -78,6 +94,61 @@ def _merge_engine_sections(final: dict, business_context: dict) -> None:
         final["deliverables"] = deliverables
 
 
+def _merge_system_sections(final: dict, business_context: dict, state: ProposalState) -> None:
+    phases = (business_context.get("timeline_data") or {}).get("phases") or []
+    if isinstance(phases, list) and phases and not final.get("methodology"):
+        names = [p.get("phase") or p.get("name") for p in phases if isinstance(p, dict)]
+        if names:
+            final["methodology"] = {
+                "approach": "Agile-Scrum with iterative sprint cycles and regular stakeholder reviews",
+                "phases": names,
+                "ceremonies": [
+                    "Daily standups",
+                    "Sprint planning and review",
+                    "Retrospectives",
+                    "Stakeholder demo sessions",
+                ],
+            }
+
+    rag = state.get("rag_context") or {}
+    cs = rag.get("relevant_case_studies") or []
+    if isinstance(cs, list) and cs and not final.get("case_studies"):
+        final["case_studies"] = [
+            c
+            if isinstance(c, dict)
+            else {
+                "title": (str(c).split(".")[0][:60] or "Case Study"),
+                "description": str(c),
+            }
+            for c in cs[:2]
+        ]
+
+    if not final.get("about_company"):
+        requirements = state.get("requirements") or {}
+        domain = requirements.get("domain", "custom")
+        why = []
+        for key in ("best_practices", "domain_insights"):
+            items = rag.get(key) or []
+            if isinstance(items, list):
+                why.extend([x for x in items if isinstance(x, str)][:2])
+        if not why:
+            why = [
+                f"Specialized delivery of {domain} solutions by a dedicated cross-functional team",
+                "Transparent milestone-based engagement with regular progress reviews",
+            ]
+        final["about_company"] = {
+            "who_we_are": (
+                f"We are a software development agency focused on building reliable, scalable {domain} "
+                "systems that address the specific operational challenges outlined in this proposal."
+            ),
+            "experience": (
+                f"Our delivery team has hands-on experience shipping {domain} platforms, combining modern "
+                "architecture with a pragmatic, business-first approach."
+            ),
+            "why_choose_us": why[:4],
+        }
+
+
 def finalizer_node(state: ProposalState) -> ProposalState:
     logger.info("Finalizing proposal output")
     draft = state.get("proposal_draft", {})
@@ -96,6 +167,7 @@ def finalizer_node(state: ProposalState) -> ProposalState:
     final = {k: v for k, v in final.items() if k in known_keys}
 
     _merge_engine_sections(final, business_context)
+    _merge_system_sections(final, business_context, state)
 
     diagrams = business_context.get("diagram_data", {})
     if diagrams:

@@ -5,7 +5,9 @@ from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader
 
+from app.config.settings import settings
 from app.export.renderers.base import BaseRenderer
+from app.templates.section_rules import SECTION_RULES
 
 logger = logging.getLogger("proposalcraft.export.html_renderer")
 
@@ -30,49 +32,42 @@ TOC_LABELS = {
     "timeline": "Timeline",
     "deliverables": "Deliverables",
     "pricing": "Investment",
+    "custom_development_charges": "Custom Development Charges",
     "sla": "Service Level Agreement",
     "support": "Support Plan",
     "terms": "Terms & Conditions",
     "case_studies": "Case Studies",
     "team": "Team",
     "conclusion": "Conclusion",
-    "diagrams": "Solution Architecture & Workflow",
+    "diagrams": "Appendix A: Solution Architecture & Workflow",
 }
 
 NON_TOC_SECTIONS = {"cover_page", "table_of_contents"}
-
-CANONICAL_SECTION_ORDER = [
-    "cover_page",
-    "table_of_contents",
-    "about_company",
-    "executive_summary",
-    "client_understanding",
-    "requirement_analysis",
-    "proposed_solution",
-    "module_breakdown",
-    "technology_stack",
-    "diagrams",
-    "methodology",
-    "timeline",
-    "deliverables",
-    "pricing",
-    "sla",
-    "support",
-    "security",
-    "terms",
-    "case_studies",
-    "team",
-    "conclusion",
-]
 
 DIAGRAM_SECTION_KEYS = ("workflow_diagram_svg", "architecture_diagram_svg", "timeline_diagram_svg")
 
 TOC_RENDERED_SECTIONS = {
     "about_company", "executive_summary", "client_understanding", "requirement_analysis",
     "proposed_solution", "module_breakdown", "user_journey", "technology_stack",
-    "diagrams", "timeline", "pricing", "sla", "support", "terms", "deliverables", "security",
-    "methodology", "case_studies", "team", "conclusion",
+    "diagrams", "timeline", "pricing", "custom_development_charges", "sla", "support",
+    "terms", "deliverables", "security", "methodology", "case_studies", "team", "conclusion",
 }
+
+RENDERED_SECTION_KEYS = {
+    "about_company", "executive_summary", "client_understanding", "requirement_analysis",
+    "proposed_solution", "module_breakdown", "technology_stack", "methodology", "timeline",
+    "deliverables", "pricing", "custom_development_charges", "sla", "support", "security",
+    "terms", "case_studies", "team", "conclusion", "diagrams",
+}
+
+
+def section_order_from_rules() -> list[str]:
+    """Derive render order from SECTION_RULES — the single source of truth."""
+    return [
+        key
+        for key, _ in sorted(SECTION_RULES.items(), key=lambda kv: kv[1].get("order", 999))
+        if key in RENDERED_SECTION_KEYS
+    ]
 
 
 class HTMLPDFRenderer(BaseRenderer):
@@ -85,14 +80,17 @@ class HTMLPDFRenderer(BaseRenderer):
         sections = proposal.get("sections", proposal)
         metadata = proposal.get("metadata", proposal.get("proposal_metadata", {}))
 
+        section_order = section_order_from_rules()
+        include_diagrams = settings.ENABLE_DIAGRAMS_APPENDIX
+
         def _has_section(key: str) -> bool:
             if key == "diagrams":
-                return any(sections.get(dk) for dk in DIAGRAM_SECTION_KEYS)
+                return include_diagrams and any(sections.get(dk) for dk in DIAGRAM_SECTION_KEYS)
             return bool(sections.get(key))
 
         toc_entries = [
             {"key": s, "label": TOC_LABELS.get(s, s.replace("_", " ").title())}
-            for s in CANONICAL_SECTION_ORDER
+            for s in section_order
             if s not in NON_TOC_SECTIONS
             and s in TOC_RENDERED_SECTIONS
             and _has_section(s)
@@ -105,7 +103,8 @@ class HTMLPDFRenderer(BaseRenderer):
             "css": css,
             "metadata": metadata,
             "toc_entries": toc_entries,
-            "section_order": CANONICAL_SECTION_ORDER,
+            "section_order": section_order,
+            "include_diagrams_appendix": include_diagrams,
             **{k: v for k, v in sections.items() if k not in ("css", "metadata", "toc_entries", "section_order")},
         }
 

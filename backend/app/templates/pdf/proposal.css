@@ -3,14 +3,18 @@
   --fs-cover: 30pt;
   --fs-cover-subtitle: 16pt;
   --fs-h2: 18pt;
-  --fs-h3: 12pt;
-  --fs-h4: 10.5pt;
-  --fs-body: 10.5pt;
+  --fs-h3: 13pt;
+  --fs-h4: 11pt;
+  --fs-body: 11pt;
   --fs-table: 9.5pt;
   --fs-toc: 10.5pt;
   --fs-caption: 9pt;
   --fs-cover-label: 9pt;
   --fs-header-footer: 8pt;
+}
+
+body {
+  counter-reset: section;
 }
 
 @page {
@@ -64,6 +68,11 @@ body {
   position: running(header_left);
   font-size: var(--fs-header-footer);
   color: #888;
+}
+.running-header-left .header-logo {
+  height: 14pt;
+  max-width: 140pt;
+  vertical-align: middle;
 }
 .running-header-right {
   position: running(header_right);
@@ -214,32 +223,48 @@ body {
   color: #1a365d;
   border-bottom: 2px solid #1a56db;
   padding-bottom: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
   font-size: var(--fs-h2);
+  font-weight: 700;
   page-break-before: always;
+  counter-increment: section;
+}
+
+.section h2::before {
+  content: counter(section) ". ";
+  color: #1a56db;
 }
 
 .section h2.no-break {
   page-break-before: avoid;
 }
 
+.section h2.no-number::before {
+  content: none;
+}
+
+.appendix h2 {
+  counter-increment: none;
+}
+
 .section h3 {
   color: #2d3748;
-  margin: 18px 0 8px;
+  margin: 24px 0 10px;
   font-size: var(--fs-h3);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .section h4 {
   color: #4a5568;
-  margin: 14px 0 6px;
+  margin: 18px 0 8px;
   font-size: var(--fs-h4);
   font-weight: 600;
 }
 
 .section p {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   text-align: justify;
+  line-height: 1.5;
 }
 
 .section ul, .section ol {
@@ -304,7 +329,7 @@ table {
 
 th, td {
   border: 1px solid #d1d5db;
-  padding: 8px 12px;
+  padding: 9px 13px;
   text-align: left;
   vertical-align: top;
 }

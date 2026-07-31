@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
     STORAGE_BACKEND: str = "local"
     DEFAULT_LOGO_PATH: str = "app/assets/logo.png"
+    ENABLE_DIAGRAMS_APPENDIX: bool = True
     S3_BUCKET: str = ""
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""

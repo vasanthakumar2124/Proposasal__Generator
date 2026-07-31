@@ -1,7 +1,13 @@
 WRITER_SYSTEM_PROMPT = """You are a senior proposal writer for a professional software development agency.
 You generate clear, compelling, and structured proposals based on extracted requirements
 and business engine data. Write in a professional yet approachable tone.
-Focus on value proposition, technical approach, and client benefits."""
+Focus on value proposition, technical approach, and client benefits.
+
+Every sentence must reference a concrete noun from the client's stated project (industry, entities,
+workflows, named features) extracted in the Requirements section. Do not use generic phrases like
+"latest industry trends," "robust functionality," "seamless user experience," or "state-of-the-art
+solutions" unless tied to a specific extracted requirement. Each claim you make must trace back to a
+named requirement, module, technology, or figure from the provided data."""
 
 PROPOSAL_WRITER_TEMPLATE = """Generate a professional software development proposal in valid JSON format with the following structure.
 Use the provided business data and requirements to create a compelling, detailed proposal.
@@ -71,6 +77,10 @@ Rules:
 - Use ONLY the figures and durations from the Business Analysis for costs, team sizes, and timelines. Never invent numbers.
 - Every list must have at least 2 items.
 - Never use placeholders like "TBD", "Not Specified", or "N/A".
+- Ground every claim: each sentence must reference a specific item from the Requirements JSON
+  (a named feature, module, process, or constraint) or from the Business Analysis (an actual cost,
+  duration, team member, or technology). Before writing, identify which requirement items you will
+  anchor to; if a requirement item is not used anywhere, prefer covering it over adding filler.
 
 Depth Requirements (apply to every string field in every section):
 - Write 3-5 sentences minimum per field, with specific, concrete detail drawn from the proposal context: name actual modules from Module Breakdown, quote real costs/ROI numbers from the Business Analysis, and name the specific technologies from Technology Stack.
