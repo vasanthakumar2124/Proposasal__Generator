@@ -229,6 +229,12 @@ REFERENCE CONTEXT
 {context}
 
 ==================================================
+PRICING DATA
+==================================================
+
+{pricing}
+
+==================================================
 PROPOSAL DATE
 ==================================================
 
@@ -245,7 +251,7 @@ Include:
 - Project Name
 - Client Name (if available)
 - Proposal Date
-- Prepared By
+- Prepared By: [Your Company Name]
 
 # Executive Summary
 
@@ -353,11 +359,15 @@ Not Specified
 
 # Pricing
 
-Use available pricing information only.
+Use the provided pricing data to present professional pricing options.
 
-Otherwise write:
+Include:
 
-Not Specified
+- One-time development cost
+- Monthly maintenance
+- Payment options
+
+Write pricing in a professional table format.
 
 # Terms and Conditions
 
@@ -377,6 +387,7 @@ Rules
 
 - Use professional business language.
 - Format using Markdown headings and bullet points.
+- Be specific and detailed - this is a real proposal.
 - Do NOT mention:
     - RAG
     - AI generation
@@ -384,10 +395,8 @@ Rules
     - Retrieved documents
     - Internal systems
 - Do NOT invent:
-    - Pricing
     - Timelines
     - Legal clauses
-    - Deliverables
     - Client information
 - If information is unavailable, write "Not Specified".
 - Return only the proposal.

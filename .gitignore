@@ -1,23 +1,36 @@
-# Virtual Environment
+# Virtual Environments
 venv/
+.venv/
+my_venv/
 
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
 
-# Environment variables
+# Environment files
 .env
+.env.local
 
 # Generated files
-generated/
+data/generated/
+data/outputs/
+backend/generated/
+backend/outputs/
+backend/data/
 
-# Node modules
+# Archives
+*.zip
+
+# Node
 frontend/node_modules/
+node_modules/
 
-# Build files
+# Build
 frontend/dist/
-
-# Logs
 *.log
 
 # IDE
@@ -26,6 +39,4 @@ frontend/dist/
 
 # OS
 .DS_Store
-
-# Uploaded files
-backend/data/uploads/
+Thumbs.db

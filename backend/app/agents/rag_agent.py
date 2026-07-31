@@ -1,106 +1,63 @@
-import json
+import logging
 
-from app.rag.retriever import search_documents
+from app.agents.base import BaseAgent
+from app.llm.prompts import RAG_SYSTEM_PROMPT, RAG_CONTEXT_TEMPLATE
+from app.llm.tokenizer import estimate_tokens, truncate_to_max_tokens
 
-from app.llm.prompts import RAG_FORMATTER_PROMPT
+logger = logging.getLogger("proposalcraft.agents.rag")
 
-from app.llm.client import generate_response
-
-
-class RAGAgent:
-
-
-    def __init__(self):
-        self.name = "RAG Agent"
+# groq/fast (llama-3.1-8b-instant) has TPM limit ~6000
+MAX_PROMPT_TOKENS = 4000
 
 
+class RAGAgent(BaseAgent):
+    name = "rag_agent"
 
-    def create_search_query(self, requirement):
+    def run(self, state: dict) -> dict:
+        rag_chunks = state.get("rag_chunks", [])
+        domain = state.get("requirements", {}).get("domain", "custom")
+        description = state.get("requirements", {}).get("description", "")
 
-        query = f"""
-        Find similar software proposals.
-
-        Project:
-        {requirement.get("project_name")}
-
-        Domain:
-        {requirement.get("domain")}
-
-        Required areas:
-
-        - Executive Summary
-        - Features
-        - Technology Stack
-        - Timeline
-        - Pricing
-
-        """
-
-        return query
-
-
-
-    def run(self, requirement):
-
-        # Step 1: Create search query
-
-        query = self.create_search_query(
-            requirement
-        )
-
-
-        # Step 2: Retrieve relevant documents from Qdrant
-
-        documents = search_documents(
-            query
-        )
-
-
-        # Step 3: Prepare retrieved context
-
-        context = "\n\n".join(
-            [
-                doc["content"]
-                for doc in documents
-            ]
-        )
-
-
-        # Step 4: Format context using LLM
-
-        prompt = RAG_FORMATTER_PROMPT.format(
-            context=context
-        )
-
-
-        response = generate_response(
-            prompt
-        )
-
-
-        # Step 5: Convert JSON string to Python dictionary
-
-        try:
-
-            formatted_context = json.loads(
-                response
-            )
-
-
-        except json.JSONDecodeError:
-
-            formatted_context = {
-                "raw_context": response
+        if not rag_chunks:
+            logger.info("No RAG chunks provided, returning default context")
+            return {
+                **state,
+                "rag_context": {
+                    "domain_insights": [],
+                    "technical_insights": [],
+                    "best_practices": [],
+                    "relevant_case_studies": [],
+                    "key_considerations": [],
+                },
             }
 
+        raw_chunks = "\n---\n".join(
+            [c if isinstance(c, str) else c.get("content", str(c)) for c in rag_chunks]
+        )
 
+        template_prefix = f"{RAG_SYSTEM_PROMPT}\n\n{RAG_CONTEXT_TEMPLATE}"
+        prefix_tokens = estimate_tokens(template_prefix)
+        data_budget = MAX_PROMPT_TOKENS - prefix_tokens
+        truncated_chunks = truncate_to_max_tokens(raw_chunks, data_budget) if data_budget > 0 else ""
 
-        # Step 6: Return structured RAG output
+        try:
+            prompt = f"{RAG_SYSTEM_PROMPT}\n\n{RAG_CONTEXT_TEMPLATE.format(
+                domain=domain,
+                description=description,
+                rag_chunks=truncated_chunks,
+            )}"
+            result = self._llm_json(prompt, complexity="simple")
+        except Exception as e:
+            logger.error("RAG agent LLM call failed: %s", e)
+            result = {
+                "domain_insights": [],
+                "technical_insights": [],
+                "best_practices": [],
+                "relevant_case_studies": [],
+                "key_considerations": [],
+            }
 
         return {
-
-            "search_query": query,
-
-            "retrieved_context": formatted_context
-
+            **state,
+            "rag_context": result,
         }

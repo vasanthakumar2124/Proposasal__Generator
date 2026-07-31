@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ metadata.proposal_title or "Proposal" }}</title>
+<style>
+{{ css }}
+</style>
+</head>
+<body>
+
+<div class="running-header-left">{{ metadata.company_name or "" }}</div>
+<div class="running-header-right">CONFIDENTIAL</div>
+
+<div class="cover-page">
+  {% if metadata.company_logo %}
+  <img src="{{ metadata.company_logo }}" class="logo" alt="Logo">
+  {% endif %}
+  <div class="cover-accent"></div>
+  <h1 class="cover-title">{{ metadata.proposal_title or "PROPOSAL" }}</h1>
+  <h2 class="cover-subtitle">{{ metadata.subtitle or metadata.project_name or "" }}</h2>
+  <div class="cover-meta-wrapper">
+  <div class="cover-meta">
+    <div class="meta-row"><span class="meta-label">Prepared For</span><span class="meta-value">{{ metadata.prepared_for or metadata.client_name or "Client" }}</span></div>
+    <div class="meta-row"><span class="meta-label">Prepared By</span><span class="meta-value">{{ metadata.prepared_by or metadata.company_name or "Company" }}</span></div>
+    <div class="meta-row"><span class="meta-label">Date</span><span class="meta-value">{{ metadata.date or "" }}</span></div>
+    <div class="meta-row"><span class="meta-label">Version</span><span class="meta-value">{{ metadata.version or "1.0" }}</span></div>
+    <div class="meta-row"><span class="meta-label">Proposal ID</span><span class="meta-value">{{ metadata.proposal_id or "—" }}</span></div>
+  </div>
+  </div>
+  <p class="confidential">CONFIDENTIAL</p>
+  <p class="confidential-note">This proposal contains confidential business information intended only for the recipient.</p>
+</div>
+
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ul>
+    {% for entry in toc_entries %}
+    <li class="toc-section" data-section-id="sec-{{ entry.key }}"><a href="#sec-{{ entry.key }}">{{ entry.label }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% for key in section_order %}
+
+{% if key == "about_company" and about_company %}
+<div id="sec-about_company" class="section page-break">
+  <h2>About Us</h2>
+  {% if about_company.who_we_are %}<p>{{ about_company.who_we_are }}</p>{% endif %}
+  {% if about_company.experience %}<h3>Experience</h3><p>{{ about_company.experience }}</p>{% endif %}
+  {% if about_company.vision %}<h3>Vision</h3><p>{{ about_company.vision }}</p>{% endif %}
+  {% if about_company.mission %}<h3>Mission</h3><p>{{ about_company.mission }}</p>{% endif %}
+  {% if about_company.why_choose_us %}<h3>Why Choose Us</h3><ul>{% for item in about_company.why_choose_us %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+  {% if about_company.achievements %}<h3>Achievements</h3><ul>{% for item in about_company.achievements %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "executive_summary" and executive_summary %}
+<div id="sec-executive_summary" class="section">
+  <h2>Executive Summary</h2>
+  {% if executive_summary.business_overview %}<p><strong>Overview:</strong> {{ executive_summary.business_overview }}</p>{% endif %}
+  {% if executive_summary.problem_statement %}<p><strong>Problem Statement:</strong> {{ executive_summary.problem_statement }}</p>{% endif %}
+  {% if executive_summary.proposed_solution %}<p><strong>Proposed Solution:</strong> {{ executive_summary.proposed_solution }}</p>{% endif %}
+  {% if executive_summary.expected_roi %}<p><strong>Expected ROI:</strong> {{ executive_summary.expected_roi }}</p>{% endif %}
+  {% if executive_summary.business_value %}<p><strong>Business Value:</strong> {{ executive_summary.business_value }}</p>{% endif %}
+  {% if executive_summary.key_benefits %}<h3>Key Benefits</h3><ul>{% for b in executive_summary.key_benefits %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "client_understanding" and client_understanding %}
+<div id="sec-client_understanding" class="section">
+  <h2>Client Understanding</h2>
+  {% if client_understanding.business_overview %}<p>{{ client_understanding.business_overview }}</p>{% endif %}
+  {% if client_understanding.current_challenges %}<h3>Current Challenges</h3><ul>{% for c in client_understanding.current_challenges %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+  {% if client_understanding.pain_points %}<h3>Pain Points</h3><ul>{% for p in client_understanding.pain_points %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+  {% if client_understanding.business_goals %}<h3>Business Goals</h3><ul>{% for g in client_understanding.business_goals %}<li>{{ g }}</li>{% endfor %}</ul>{% endif %}
+  {% if client_understanding.opportunities %}<h3>Opportunities</h3><ul>{% for o in client_understanding.opportunities %}<li>{{ o }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "requirement_analysis" and requirement_analysis %}
+<div id="sec-requirement_analysis" class="section">
+  <h2>Requirement Analysis</h2>
+  {% if requirement_analysis.functional_requirements %}<h3>Functional Requirements</h3><ul>{% for r in requirement_analysis.functional_requirements %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+  {% if requirement_analysis.non_functional_requirements %}<h3>Non-Functional Requirements</h3><ul>{% for r in requirement_analysis.non_functional_requirements %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+  {% if requirement_analysis.assumptions %}<h3>Assumptions</h3><ul>{% for a in requirement_analysis.assumptions %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+  {% if requirement_analysis.dependencies %}<h3>Dependencies</h3><ul>{% for d in requirement_analysis.dependencies %}<li>{{ d }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "proposed_solution" and proposed_solution %}
+<div id="sec-proposed_solution" class="section">
+  <h2>Proposed Solution</h2>
+  {% if proposed_solution.overview %}<p>{{ proposed_solution.overview }}</p>{% endif %}
+  {% if proposed_solution.architecture %}<h3>Architecture</h3><p>{{ proposed_solution.architecture }}</p>{% endif %}
+  {% if proposed_solution.workflow %}<h3>Workflow</h3><p>{{ proposed_solution.workflow }}</p>{% endif %}
+  {% if proposed_solution.security %}<h3>Security</h3><p>{{ proposed_solution.security }}</p>{% endif %}
+  {% if proposed_solution.scalability %}<h3>Scalability</h3><p>{{ proposed_solution.scalability }}</p>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "module_breakdown" and module_breakdown %}
+<div id="sec-module_breakdown" class="section">
+  <h2>Module Breakdown</h2>
+  <table>
+    <thead><tr><th>Module</th><th>Description</th></tr></thead>
+    <tbody>
+    {% for m in module_breakdown %}
+    <tr><td>{{ m.name or m.module_name or m }}</td><td>{{ m.description or "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if key == "technology_stack" and technology_stack %}
+<div id="sec-technology_stack" class="section">
+  <h2>Technology Stack</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Technologies</th></tr></thead>
+    <tbody>
+    {% for layer, techs in technology_stack.items() if techs %}
+    <tr><td>{{ layer|replace("_", " ")|title }}</td><td>{{ techs|join(", ") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if key == "diagrams" and (workflow_diagram_svg or architecture_diagram_svg or timeline_diagram_svg) %}
+<div id="sec-diagrams" class="section page-break">
+  <h2>Solution Architecture &amp; Workflow</h2>
+  {% if workflow_diagram_svg %}
+  <h3>Solution Workflow</h3>
+  <div class="diagram-container">
+    {{ workflow_diagram_svg | safe }}
+  </div>
+  <p class="diagram-caption">Figure 1: End-to-end solution workflow illustrating key processes and data flow between system components.</p>
+  {% endif %}
+  {% if architecture_diagram_svg %}
+  <h3>System Architecture</h3>
+  <p>The architecture diagram below presents the high-level system design, showing how different layers and components interact within the solution ecosystem.</p>
+  <div class="diagram-container">
+    {{ architecture_diagram_svg | safe }}
+  </div>
+  <p class="diagram-caption">Figure 2: System architecture overview with client, application, data, and integration layers.</p>
+  {% endif %}
+  {% if timeline_diagram_svg %}
+  <h3>Project Timeline</h3>
+  <div class="diagram-container">
+    {{ timeline_diagram_svg | safe }}
+  </div>
+  <p class="diagram-caption">Figure 3: Project timeline showing key phases, milestones, and delivery schedule.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if key == "methodology" and methodology %}
+<div id="sec-methodology" class="section">
+  <h2>Methodology</h2>
+  {% if methodology.phases %}<ol>{% for phase in methodology.phases %}<li>{{ phase }}</li>{% endfor %}</ol>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "timeline" and timeline %}
+<div id="sec-timeline" class="section">
+  <h2>Timeline</h2>
+  {% if timeline.phases %}
+  <table>
+    <thead><tr><th>Phase</th><th>Duration</th><th>Activities</th></tr></thead>
+    <tbody>
+    {% for phase in timeline.phases %}
+    <tr><td>{{ phase.name }}</td><td>{% if phase.duration_weeks %}{{ phase.duration_weeks }} weeks{% endif %}</td><td>{{ phase.activities|join(", ") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if timeline.milestones %}<h3>Milestones</h3><ul>{% for m in timeline.milestones %}<li>{{ m.event or m }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "deliverables" and deliverables %}
+<div id="sec-deliverables" class="section">
+  <h2>Deliverables</h2>
+  <ul>{% for d in deliverables %}<li>{{ d.name or d }}{% if d.description %}: {{ d.description }}{% endif %}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+{% if key == "pricing" and pricing %}
+<div id="sec-pricing" class="section pricing-section">
+  <h2>Investment</h2>
+  {% if pricing.one_time_cost or pricing.monthly_cost %}
+  <table class="pricing-table">
+    <thead><tr><th>Item</th><th>Amount</th></tr></thead>
+    <tbody>
+      {% if pricing.one_time_cost %}<tr><td>One-Time Development</td><td>${{ "{:,.0f}".format(pricing.one_time_cost) }}</td></tr>{% endif %}
+      {% if pricing.monthly_cost %}<tr><td>Monthly Subscription</td><td>${{ "{:,.0f}".format(pricing.monthly_cost) }}/month</td></tr>{% endif %}
+      {% if pricing.annual_cost %}<tr><td>Annual Cost (Year 1)</td><td>${{ "{:,.0f}".format(pricing.annual_cost) }}</td></tr>{% endif %}
+      {% if pricing.five_year_tco %}<tr class="total"><td><strong>5-Year TCO</strong></td><td><strong>${{ "{:,.0f}".format(pricing.five_year_tco) }}</strong></td></tr>{% endif %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if pricing.total_effort_hours %}<p><strong>Total Effort:</strong> {{ pricing.total_effort_hours }} hours</p>{% endif %}
+  {% if pricing.support_hours_included %}<p><strong>Support Hours Included:</strong> {{ pricing.support_hours_included }} hours/month</p>{% endif %}
+  {% if pricing.payment_options %}
+  <h3>Payment Options</h3>
+  <table>
+    <thead><tr><th>Option</th><th>Description</th><th>Amount</th></tr></thead>
+    <tbody>
+    {% for opt in pricing.payment_options %}
+    <tr><td>{{ opt.type }}</td><td>{{ opt.description }}</td><td>${{ "{:,.0f}".format(opt.amount) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if pricing.effort_breakdown %}
+  <h3>Effort Breakdown</h3>
+  <table>
+    <thead><tr><th>Module</th><th>Hours</th><th>Rate</th><th>Cost</th></tr></thead>
+    <tbody>
+    {% for name, details in pricing.effort_breakdown.items() %}
+    <tr><td>{{ name }}</td><td>{{ details.hours }}</td><td>${{ details.hourly_rate }}/hr</td><td>${{ "{:,.0f}".format(details.cost) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if key == "sla" and sla %}
+<div id="sec-sla" class="section">
+  <h2>Service Level Agreement</h2>
+  {% if sla.uptime_guarantee %}<p><strong>Uptime Guarantee:</strong> {{ sla.uptime_guarantee }}</p>{% endif %}
+  {% if sla.sla_tiers %}
+  <table>
+    <thead><tr><th>Priority</th><th>Description</th><th>Response Time</th><th>Resolution Time</th></tr></thead>
+    <tbody>
+    {% for tier in sla.sla_tiers %}
+    <tr><td>{{ tier.priority }}</td><td>{{ tier.description }}</td><td>{{ tier.response_time }}</td><td>{{ tier.resolution_time }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if sla.service_credits %}
+  <h3>Service Credits</h3>
+  <table>
+    <thead><tr><th>Condition</th><th>Credit</th></tr></thead>
+    <tbody>
+    {% for condition, credit in sla.service_credits.items() %}
+    <tr><td>{{ condition }}</td><td>{{ credit }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if sla.maintenance_windows %}
+  <h3>Maintenance Windows</h3>
+  <ul>
+  {% for key, val in sla.maintenance_windows.items() %}
+  <li><strong>{{ key|replace("_", " ")|title }}:</strong> {{ val }}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if key == "support" and support %}
+<div id="sec-support" class="section">
+  <h2>Support Plan</h2>
+  {% if support.recommended_plan %}<p><strong>Recommended Plan:</strong> {{ support.recommended_plan }}</p>{% endif %}
+  {% if support.hours %}<p><strong>Support Hours:</strong> {{ support.hours }}</p>{% endif %}
+  {% if support.response_time %}<p><strong>Response Time:</strong> {{ support.response_time }}</p>{% endif %}
+  {% if support.channels %}<p><strong>Channels:</strong> {{ support.channels }}</p>{% endif %}
+  {% if support.included %}<h3>Included In Plan</h3><ul>{% for item in support.included %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "security" and security %}
+<div id="sec-security" class="section">
+  <h2>Security</h2>
+  {% if security.authentication %}<p><strong>Authentication:</strong> {{ security.authentication }}</p>{% endif %}
+  {% if security.authorization %}<p><strong>Authorization:</strong> {{ security.authorization }}</p>{% endif %}
+  {% if security.encryption %}<p><strong>Encryption:</strong> {{ security.encryption }}</p>{% endif %}
+  {% if security.audit_logs %}<p><strong>Audit Logs:</strong> {{ security.audit_logs }}</p>{% endif %}
+  {% if security.backup %}<p><strong>Backup &amp; Recovery:</strong> {{ security.backup }}</p>{% endif %}
+</div>
+{% endif %}
+
+{% if key == "terms" and terms %}
+<div id="sec-terms" class="section">
+  <h2>Terms &amp; Conditions</h2>
+  {% if terms.assumptions %}<h3>Assumptions</h3><ul>{% for a in terms.assumptions %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+  {% if terms.exclusions %}<h3>Cost Exclusions</h3><ul>{% for e in terms.exclusions %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% if terms.confidentiality %}<h3>Confidentiality</h3><p>{{ terms.confidentiality }}</p>{% endif %}
+  {% if terms.warranty %}<h3>Warranty</h3><p>{{ terms.warranty }}</p>{% endif %}
+  {% if not terms.assumptions and not terms.exclusions and not terms.confidentiality and not terms.warranty %}
+  <h3>Assumptions</h3>
+  <ul>
+    <li>All requirements and specifications provided by the client are complete and accurate.</li>
+    <li>Client will provide timely feedback and approvals within agreed timelines.</li>
+    <li>Any changes to scope will be managed through a formal change request process.</li>
+    <li>Client will provide necessary access to systems, APIs, and third-party services.</li>
+  </ul>
+  <h3>Cost Exclusions</h3>
+  <ul>
+    <li>Third-party software licenses and subscription fees.</li>
+    <li>Cloud infrastructure hosting costs beyond included allocation.</li>
+    <li>Content creation and data migration beyond scope.</li>
+    <li>Training and change management beyond standard handover.</li>
+  </ul>
+  <h3>Payment Terms</h3>
+  <ul>
+    <li>30% upon agreement signing</li>
+    <li>40% upon mid-project milestone completion</li>
+    <li>30% upon final delivery and acceptance</li>
+    <li>All invoices are net-30 from date of invoice</li>
+  </ul>
+  <h3>Confidentiality</h3>
+  <p>Both parties agree to maintain strict confidentiality of all proprietary information shared during the engagement. This obligation survives the termination of this agreement for a period of 2 years.</p>
+  <h3>Warranty</h3>
+  <p>The delivered solution carries a 90-day warranty covering bug fixes and critical issues. Issues arising from modifications by unauthorized parties or Third-party dependencies are excluded.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if key == "case_studies" and case_studies %}
+<div id="sec-case_studies" class="section">
+  <h2>Case Studies</h2>
+  {% for cs in case_studies %}
+  <div class="case-study">
+    <h3>{{ cs.title or cs.name or "Case Study" }}</h3>
+    {% if cs.description %}<p>{{ cs.description }}</p>{% endif %}
+    {% if cs.results %}<ul>{% for r in cs.results %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if key == "team" and team %}
+<div id="sec-team" class="section">
+  <h2>Team</h2>
+  <table>
+    <thead><tr><th>Role</th><th>Seniority</th><th>Allocation</th></tr></thead>
+    <tbody>
+    {% for member in team %}
+    <tr><td>{{ member.role or "" }}</td><td>{{ member.seniority or "" }}</td><td>{{ member.allocation or "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if key == "conclusion" and conclusion %}
+<div id="sec-conclusion" class="section conclusion">
+  <h2>Conclusion</h2>
+  {% if conclusion.summary %}<p>{{ conclusion.summary }}</p>{% endif %}
+  {% if conclusion.next_steps %}
+  <h3>Next Steps</h3>
+  <ol>{% for step in conclusion.next_steps %}<li>{{ step }}</li>{% endfor %}</ol>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endfor %}
+
+<div class="footer-note">
+  <p>{{ metadata.company_name or "" }} — Confidential — This proposal is prepared exclusively for {{ metadata.prepared_for or metadata.client_name or "the client" }}</p>
+</div>
+
+</body>
+</html>

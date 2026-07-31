@@ -1,22 +1,50 @@
 import json
+import logging
 
-from app.llm.client import generate_response
-from app.llm.prompts import REQUIREMENT_PROMPT
+from app.agents.base import BaseAgent
+from app.llm.prompts import REQUIREMENT_SYSTEM_PROMPT, REQUIREMENT_EXTRACTION_TEMPLATE
 
-def analyze_requirement(requirement: str) -> dict:
+logger = logging.getLogger("proposalcraft.agents.requirement")
 
 
-    prompt = REQUIREMENT_PROMPT.format(
-        requirement=requirement
-    )
+class RequirementAgent(BaseAgent):
+    name = "requirement_agent"
 
-    response = generate_response(prompt)
+    def run(self, state: dict) -> dict:
+        client_input = state.get("raw_client_input", "")
+        if not client_input:
+            logger.warning("No client input provided, using defaults")
+            return self._defaults(state)
 
-    try:
-        result = json.loads(response)
-    except Exception:
-        result = {
-            "raw_response": response
+        prompt = f"{REQUIREMENT_SYSTEM_PROMPT}\n\n{REQUIREMENT_EXTRACTION_TEMPLATE.format(client_input=client_input)}"
+        try:
+            result = self._llm_json(prompt, complexity="medium")
+        except Exception as e:
+            logger.error("LLM call failed, using defaults: %s", e)
+            return self._defaults(state, client_input)
+
+        if "_parse_error" in result:
+            logger.error("Failed to parse requirements: %s", result["_parse_error"])
+            return self._defaults(state, result.get("raw_response", ""))
+
+        return {
+            **state,
+            "requirements": result,
         }
 
-    return result
+    def _defaults(self, state: dict, raw_hint: str = "") -> dict:
+        return {
+            **state,
+            "requirements": {
+                "project_name": state.get("project_name", "Software Project"),
+                "domain": state.get("domain", "custom"),
+                "project_type": state.get("project_type", "web_app"),
+                "description": raw_hint or state.get("description", "Custom software development project"),
+                "core_features": state.get("features", []),
+                "target_audience": state.get("target_audience", "End users"),
+                "timeline_constraint": state.get("timeline", "normal"),
+                "budget_range": state.get("budget", "mid"),
+                "technical_context": "",
+                "additional_notes": "",
+            },
+        }

@@ -1,25 +1,12 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Any
 
 
 class ProposalState(TypedDict):
-
-    # User Input
-    requirement: str
-
-    # Requirement Agent Output
-    requirement_json: Optional[dict]
-
-    # RAG Agent Output
+    raw_client_input: str
+    requirements: Optional[dict]
     rag_context: Optional[dict]
-
-    # Feature Agent Output
-    features: Optional[dict]
-
-    business_analysis: dict
-
-    # Proposal Writer Output
-    proposal: Optional[dict]
-
-    # PDF Generator Output
-    pdf_path: Optional[str]
-    pdf_file:str
+    business_context: Optional[dict]
+    proposal_draft: Optional[dict]
+    review: Optional[dict]
+    final_proposal: Optional[dict]
+    error: Optional[str]
