@@ -11,7 +11,7 @@ requirement_agent = RequirementAgent(llm_client)
 rag_agent = RAGAgent(llm_client)
 writer_agent = WriterAgent(llm_client)
 reviewer_agent = ReviewerAgent(llm_client)
-context_builder = ProposalContextBuilder()
+context_builder = ProposalContextBuilder(llm_client)
 
 ENGINE_SECTION_MAP = {
     "pricing": "pricing_data",
@@ -97,11 +97,23 @@ def _merge_engine_sections(final: dict, business_context: dict) -> None:
 def _merge_system_sections(final: dict, business_context: dict, state: ProposalState) -> None:
     phases = (business_context.get("timeline_data") or {}).get("phases") or []
     if isinstance(phases, list) and phases and not final.get("methodology"):
-        names = [p.get("phase") or p.get("name") for p in phases if isinstance(p, dict)]
-        if names:
+        steps = []
+        for p in phases:
+            if not isinstance(p, dict):
+                continue
+            name = str(p.get("name") or p.get("phase") or "").strip()
+            if not name or name.isdigit():
+                continue
+            duration = p.get("duration_weeks") or ""
+            activities = p.get("activities") or []
+            detail = f"{name} ({duration} weeks)" if duration else name
+            if isinstance(activities, list) and activities:
+                detail += " — " + "; ".join(str(a) for a in activities[:3])
+            steps.append(detail)
+        if steps:
             final["methodology"] = {
                 "approach": "Agile-Scrum with iterative sprint cycles and regular stakeholder reviews",
-                "phases": names,
+                "phases": steps,
                 "ceremonies": [
                     "Daily standups",
                     "Sprint planning and review",
@@ -195,11 +207,13 @@ def requirement_node(state: ProposalState) -> ProposalState:
 
 def business_engines_node(state: ProposalState) -> ProposalState:
     logger.info("Running business engines")
-    reqs = state.get("requirements", {})
+    reqs = state.get("requirements", {}) or {}
     engine_input = {
         "domain": reqs.get("domain", "custom"),
         "project_type": reqs.get("project_type", "web_app"),
         "description": reqs.get("description", ""),
+        "project_domain_description": reqs.get("project_domain_description") or reqs.get("description", ""),
+        "core_features": reqs.get("core_features", []) or [],
         "budget_range": reqs.get("budget_range", "mid"),
         "timeline_constraint": reqs.get("timeline_constraint", "normal"),
     }
@@ -225,7 +239,7 @@ def rag_node(state: ProposalState) -> ProposalState:
         rag_chunks = []
         query = f"{domain} {project_type} {description}"
         if len(query.strip()) > 10:
-            for coll in ["industry_knowledge", "best_practices", "technology_knowledge", "pricing_data"]:
+            for coll in ["industry_knowledge", "best_practices", "technology_knowledge", "pricing_data", "case_studies"]:
                 try:
                     results = qdrant_service.search(query, collection_name=coll, top_k=3)
                     rag_chunks.extend([r.content for r in results])

@@ -169,35 +169,6 @@ def _normalize_section_dict(proposal: dict, key: str, data: dict) -> None:
             "out_of_scope": data.get("out_of_scope", []),
         }
         proposal.pop(key, None)
-    elif key == "technical_approach":
-        proposal["proposed_solution"] = {
-            "overview": data.get("architecture", ""),
-            "architecture": data.get("architecture", ""),
-            "workflow": data.get("methodology", ""),
-        }
-        tech_stack = data.get("tech_stack", [])
-        if isinstance(tech_stack, list):
-            proposal["technology_stack"] = {"backend": tech_stack if tech_stack else [], "frontend": [], "database": []}
-        elif isinstance(tech_stack, dict):
-            proposal["technology_stack"] = tech_stack
-        else:
-            proposal["technology_stack"] = {}
-        dev_phases = data.get("development_phases", [])
-        if dev_phases:
-            proposal["methodology"] = {"phases": [p.get("phase", str(p)) for p in dev_phases] if isinstance(dev_phases, list) else dev_phases}
-        if "development_phases" in data:
-            ts = proposal.get("timeline", {})
-            if isinstance(dev_phases, list):
-                ts["phases"] = [
-                    {
-                        "name": p.get("phase", ""),
-                        "duration_weeks": p.get("duration", "").split()[0] if p.get("duration") else "",
-                        "activities": [p.get("description", "")] if p.get("description") else [],
-                    }
-                    for p in dev_phases
-                ]
-            proposal["timeline"] = ts
-        proposal.pop(key, None)
     elif key == "why_choose_us":
         parts = []
         if data.get("expertise"):

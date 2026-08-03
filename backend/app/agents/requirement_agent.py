@@ -38,6 +38,7 @@ class RequirementAgent(BaseAgent):
             "requirements": {
                 "project_name": state.get("project_name", "Software Project"),
                 "domain": state.get("domain", "custom"),
+                "project_domain_description": raw_hint or state.get("description", ""),
                 "project_type": state.get("project_type", "web_app"),
                 "description": raw_hint or state.get("description", "Custom software development project"),
                 "core_features": state.get("features", []),

@@ -1,4 +1,10 @@
+import json
+import logging
+
 from app.engines.base_engine import BaseEngine
+from app.llm.prompts import COMPLIANCE_SYSTEM_PROMPT, COMPLIANCE_EXTRACTION_TEMPLATE
+
+logger = logging.getLogger("proposalcraft.engines.industry")
 
 INDUSTRY_PATTERNS = {
     "healthcare": {
@@ -146,6 +152,9 @@ INDUSTRY_ALIASES = {
 class IndustryEngine(BaseEngine):
     name = "industry"
 
+    def __init__(self, llm=None):
+        self.llm = llm
+
     def run(self, context: dict) -> dict:
         domain = (context.get("domain") or context.get("industry") or "custom").lower().strip()
         resolved = INDUSTRY_ALIASES.get(domain)
@@ -160,13 +169,72 @@ class IndustryEngine(BaseEngine):
             "stakeholders": ["product_owners", "developers", "users", "management"],
             "complexity": "medium",
         }))
+
+        compliance, standards = self._derive_compliance(context, pattern)
         return {
             "industry": resolved,
             "pattern": pattern,
-            "compliance_requirements": pattern["compliance"],
-            "applicable_standards": pattern["standards"],
+            "compliance_requirements": compliance,
+            "applicable_standards": standards,
             "key_concerns": pattern["concerns"],
             "industry_trends": pattern["trends"],
             "stakeholders": pattern["stakeholders"],
             "complexity": pattern["complexity"],
         }
+
+    def _derive_compliance(self, context: dict, pattern: dict) -> tuple[list, list]:
+        description = (context.get("description") or "").strip()
+        if self.llm is not None and description:
+            try:
+                prompt = f"{COMPLIANCE_SYSTEM_PROMPT}\n\n{COMPLIANCE_EXTRACTION_TEMPLATE.format(
+                    description=description,
+                    project_domain_description=context.get("project_domain_description") or description,
+                    core_features=json.dumps(context.get("core_features", []))[:1200],
+                )}"
+                result = self.llm.generate_json(prompt, complexity="simple", max_tokens=512)
+                if "_parse_error" not in result:
+                    compliance = self._clean_list(result.get("compliance"))
+                    standards = self._clean_list(result.get("standards"))
+                    if compliance or standards:
+                        return compliance, standards
+            except Exception as e:
+                logger.warning("Compliance LLM call failed (%s), using heuristics", e)
+
+        return self._compliance_heuristics(description, pattern)
+
+    @staticmethod
+    def _clean_list(items) -> list:
+        if not isinstance(items, list):
+            return []
+        seen = set()
+        out = []
+        for item in items:
+            text = str(item).strip()
+            if not text or text.isdigit() or len(text) > 60 or text in seen:
+                continue
+            seen.add(text)
+            out.append(text)
+            if len(out) >= 4:
+                break
+        return out
+
+    @staticmethod
+    def _compliance_heuristics(description: str, pattern: dict) -> tuple[list, list]:
+        text = (description or "").lower()
+        compliance = []
+        standards = []
+        if any(k in text for k in ("payment", "checkout", "card", "transaction", "pos ", "online store", "cart")):
+            compliance.append("PCI DSS")
+        if any(k in text for k in ("health", "patient", "medical", "clinic", "hospital", "hipaa")):
+            compliance.append("HIPAA")
+        if any(k in text for k in ("student", "school", "education", "children", "kids")):
+            compliance.extend(["FERPA", "COPPA"])
+        if any(k in text for k in ("payroll", "hr ", "employee", "hiring")):
+            compliance.append("SOC 2")
+        if any(k in text for k in ("bank", "loan", "kyc", "financ", "aml")):
+            compliance.extend(["SOX", "KYC/AML"])
+        if not compliance:
+            compliance = list(pattern.get("compliance", []))
+        if not standards:
+            standards = list(pattern.get("standards", []))
+        return compliance[:4], standards[:4]

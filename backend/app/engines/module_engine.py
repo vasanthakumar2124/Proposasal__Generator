@@ -1,4 +1,9 @@
+import json
+import logging
 from app.engines.base_engine import BaseEngine
+from app.llm.prompts import MODULE_SYSTEM_PROMPT, MODULE_EXTRACTION_TEMPLATE
+
+logger = logging.getLogger("proposalcraft.engines.module")
 
 MODULES_BY_INDUSTRY = {
     "healthcare": {
@@ -160,17 +165,75 @@ MODULES_BY_INDUSTRY = {
 class ModuleEngine(BaseEngine):
     name = "module"
 
-    def run(self, context: dict) -> dict:
-        industry = (context.get("industry_data") or {}).get("industry", "custom")
-        modules = MODULES_BY_INDUSTRY.get(industry, MODULES_BY_INDUSTRY.get("custom", {
-            "core": [{"name": "User Management", "description": "User registration, roles, permissions"}],
-            "advanced": [{"name": "Analytics Dashboard", "description": "Reports, charts, data export"}],
-        }))
+    def __init__(self, llm=None):
+        self.llm = llm
 
+    def run(self, context: dict) -> dict:
+        modules = self._generate_modules(context)
+        used_llm = self.llm is not None and bool((context.get("description") or "").strip())
         all_modules = modules.get("core", []) + modules.get("advanced", [])
         return {
             "modules": all_modules,
             "core_modules": modules.get("core", []),
             "advanced_modules": modules.get("advanced", []),
             "module_count": len(all_modules),
+            "module_source": "llm" if used_llm else "lookup",
         }
+
+    def _generate_modules(self, context: dict) -> dict:
+        industry = (context.get("industry_data") or {}).get("industry", "custom")
+        fallback = MODULES_BY_INDUSTRY.get(industry, MODULES_BY_INDUSTRY.get("custom", {
+            "core": [{"name": "User Management", "description": "User registration, roles, permissions"}],
+            "advanced": [{"name": "Analytics Dashboard", "description": "Reports, charts, data export"}],
+        }))
+
+        if self.llm is None:
+            return fallback
+
+        description = (context.get("description") or "").strip()
+        if not description:
+            return fallback
+
+        try:
+            prompt = f"{MODULE_SYSTEM_PROMPT}\n\n{MODULE_EXTRACTION_TEMPLATE.format(
+                domain=context.get("domain", "custom"),
+                project_type=context.get("project_type", "custom"),
+                project_domain_description=context.get("project_domain_description") or description,
+                description=description,
+                core_features=json.dumps(context.get("core_features", []))[:1500],
+            )}"
+            result = self.llm.generate_json(prompt, complexity="simple", max_tokens=2048)
+            if "_parse_error" in result:
+                logger.warning("Module LLM parse error, using lookup fallback")
+                return fallback
+
+            core = self._validate_modules(result.get("core_modules"))
+            advanced = self._validate_modules(result.get("advanced_modules"))
+            if not core:
+                logger.warning("Module LLM returned no valid core modules, using lookup fallback")
+                return fallback
+
+            return {"core": core[:8], "advanced": advanced[:6]}
+        except Exception as e:
+            logger.warning("Module LLM call failed (%s), using lookup fallback", e)
+            return fallback
+
+    @staticmethod
+    def _validate_modules(items) -> list:
+        if not isinstance(items, list):
+            return []
+        seen = set()
+        valid = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "")).strip()
+            description = str(item.get("description", "")).strip()
+            if not name or len(name) < 2 or len(description) < 10:
+                continue
+            key = name.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            valid.append({"name": name, "description": description})
+        return valid
