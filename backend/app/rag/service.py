@@ -96,31 +96,6 @@ class QdrantService:
             for h in hits
         ]
 
-    def hybrid_search(
-        self,
-        query: str,
-        collection_name: str = "industry_knowledge",
-        top_k: int = 10,
-        keyword_weight: float = 0.3,
-        vector_weight: float = 0.7,
-    ) -> list[SearchResult]:
-        vector = embedding_service.embed_query(query)
-        client = self._get_client()
-        hits = client.search(
-            collection_name=collection_name,
-            query_vector=vector,
-            limit=top_k,
-        )
-        return [
-            SearchResult(
-                content=h.payload.get("content", ""),
-                score=h.score,
-                metadata={k: v for k, v in h.payload.items() if k != "content"},
-                collection_name=collection_name,
-            )
-            for h in hits
-        ]
-
     def delete_document(self, collection_name: str, point_id: str) -> bool:
         client = self._get_client()
         client.delete(collection_name=collection_name, points_selector=[point_id])
