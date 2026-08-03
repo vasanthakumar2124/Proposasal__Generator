@@ -26,7 +26,7 @@ class TestNormalizeProposal:
         assert result["requirement_analysis"]["scope"] == "in scope"
         assert result["requirement_analysis"]["out_of_scope"] == ["out1"]
 
-    def test_technical_approach_maps_correctly(self):
+    def test_technical_approach_dead_branch_removed(self):
         data = {
             "technical_approach": {
                 "architecture": "microservices",
@@ -38,10 +38,10 @@ class TestNormalizeProposal:
             }
         }
         result = normalize_proposal(data)
-        assert "technical_approach" not in result
-        assert result["proposed_solution"]["architecture"] == "microservices"
-        assert result["technology_stack"]["backend"] == ["Python", "FastAPI"]
-        assert result["methodology"]["phases"] == ["Phase 1"]
+        assert "technical_approach" in result
+        assert "proposed_solution" not in result
+        assert "technology_stack" not in result
+        assert "methodology" not in result
 
     def test_core_features_list_maps_to_module_breakdown(self):
         data = {

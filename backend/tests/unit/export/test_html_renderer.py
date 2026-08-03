@@ -20,17 +20,15 @@ class TestHTMLPDFRenderer:
         raw = {
             "metadata": {"proposal_title": "Test"},
             "executive_summary": "Summary text",
-            "project_overview": {
-                "background": "bg",
+            "client_understanding": {
+                "business_overview": "bg",
                 "objectives": ["o1"],
                 "scope": "in",
                 "out_of_scope": [],
             },
-            "technical_approach": {
+            "proposed_solution": {
                 "architecture": "arch",
-                "tech_stack": ["Py"],
-                "methodology": "agile",
-                "development_phases": [],
+                "overview": "solution overview",
             },
             "core_features": [{"name": "F1", "description": "desc", "benefit": "b"}],
             "implementation_plan": {

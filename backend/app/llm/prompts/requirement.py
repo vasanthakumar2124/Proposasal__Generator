@@ -7,7 +7,8 @@ Output valid JSON with these exact keys:
 
 {{
   "project_name": "short descriptive name",
-  "domain": "healthcare|erp|fintech|edtech|ecommerce|logistics|realestate|hospitality|media|manufacturing|saas|custom",
+  "domain": "loose industry tag ONLY for broad compliance defaults — one of healthcare|erp|fintech|edtech|ecommerce|logistics|realestate|hospitality|media|manufacturing|saas|custom. Use 'custom' whenever the project does not clearly fit one of the named buckets (e.g. a car marketplace is custom, not ecommerce).",
+  "project_domain_description": "free-text 1-2 sentence description of the actual business domain and how the product works — e.g. 'peer-to-peer car marketplace with listings, search, and buyer/seller messaging'",
   "project_type": "web_app|mobile_app|saas_platform|ecommerce|custom",
   "description": "2-3 sentence summary",
   "core_features": ["list", "of", "key", "features"],

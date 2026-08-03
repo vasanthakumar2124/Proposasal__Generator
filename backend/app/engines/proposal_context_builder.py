@@ -19,15 +19,16 @@ from app.engines.template_engine import TemplateEngine
 
 class ProposalContextBuilder(BaseEngine):
     """Orchestrates all business engines to build complete proposal context.
-    Zero LLM calls — pure deterministic Python.
+    LLM is used only for project-specific grounding (modules, compliance); all
+    numbers remain deterministic Python.
     """
 
     name = "context_builder"
 
-    def __init__(self):
+    def __init__(self, llm=None):
         self.engines = {
-            "industry": IndustryEngine(),
-            "modules": ModuleEngine(),
+            "industry": IndustryEngine(llm),
+            "modules": ModuleEngine(llm),
             "features": FeatureEngine(),
             "automation": AutomationEngine(),
             "integrations": IntegrationEngine(),

@@ -1,14 +1,15 @@
 :root {
-  /* Type scale — single source of truth for font sizes */
+  /* Type scale — single source of truth for font sizes (matched to ERP benchmark:
+     body 12pt Arial, page titles 17pt, subheads 13pt, tables ~10pt) */
   --fs-cover: 30pt;
   --fs-cover-subtitle: 16pt;
-  --fs-h2: 18pt;
+  --fs-h2: 17pt;
   --fs-h3: 13pt;
-  --fs-h4: 11pt;
-  --fs-body: 11pt;
-  --fs-table: 9.5pt;
-  --fs-toc: 10.5pt;
-  --fs-caption: 9pt;
+  --fs-h4: 12pt;
+  --fs-body: 12pt;
+  --fs-table: 10pt;
+  --fs-toc: 11pt;
+  --fs-caption: 9.5pt;
   --fs-cover-label: 9pt;
   --fs-header-footer: 8pt;
 }
