@@ -33,6 +33,9 @@ def _merge_engine_sections(final: dict, business_context: dict) -> None:
             for layer, techs in stack.items()
             if techs
         }
+        rationale = (business_context.get("tech_stack_data") or {}).get("rationale")
+        if rationale:
+            final["technology_stack"]["rationale"] = rationale
 
     modules = (business_context.get("module_data") or {}).get("modules") or []
     if modules:
@@ -151,11 +154,15 @@ def _merge_system_sections(final: dict, business_context: dict, state: ProposalS
         final["about_company"] = {
             "who_we_are": (
                 f"We are a software development agency focused on building reliable, scalable {domain} "
-                "systems that address the specific operational challenges outlined in this proposal."
+                "systems that address the specific operational challenges outlined in this proposal. "
+                "Our engineers work in small, senior-led delivery teams so every engagement gets direct "
+                "access to the people building the product, from discovery through launch and support."
             ),
             "experience": (
                 f"Our delivery team has hands-on experience shipping {domain} platforms, combining modern "
-                "architecture with a pragmatic, business-first approach."
+                "architecture with a pragmatic, business-first approach. That experience covers the full "
+                "lifecycle of this type of engagement — requirements analysis, design, build, QA, and "
+                "post-launch operations — which is why the scope in this proposal is structured the way it is."
             ),
             "why_choose_us": why[:4],
         }
@@ -237,15 +244,20 @@ def rag_node(state: ProposalState) -> ProposalState:
         from app.rag import qdrant_service
         qdrant_service.initialize()
         rag_chunks = []
+        case_study_chunks = []
         query = f"{domain} {project_type} {description}"
         if len(query.strip()) > 10:
             for coll in ["industry_knowledge", "best_practices", "technology_knowledge", "pricing_data", "case_studies"]:
                 try:
                     results = qdrant_service.search(query, collection_name=coll, top_k=3)
-                    rag_chunks.extend([r.content for r in results])
+                    for r in results:
+                        rag_chunks.append(r.content)
+                        if coll == "case_studies":
+                            case_study_chunks.append(r.content)
                 except Exception:
                     continue
         state["rag_chunks"] = rag_chunks[:10]
+        state["case_study_chunks"] = case_study_chunks[:3]
     except Exception as e:
         logger.warning("Qdrant search failed, using empty RAG: %s", e)
         state["rag_chunks"] = []

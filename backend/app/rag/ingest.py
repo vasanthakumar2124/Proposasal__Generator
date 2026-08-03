@@ -41,7 +41,7 @@ class IngestPipeline:
                 pid = qdrant_service.insert_document(
                     collection_name=collection_name,
                     content=chunk,
-                    metadata={**metadata, "chunk_index": point_ids.count(pid := "") and 0 or 0} if False else metadata,
+                    metadata=metadata,
                 )
                 point_ids.append(pid)
         logger.info("Ingested %d chunks total into '%s'", len(point_ids), collection_name)

@@ -7,44 +7,18 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.config.settings import settings
 from app.export.renderers.base import BaseRenderer
-from app.templates.section_rules import SECTION_RULES
+from app.export.renderers.common import (
+    SECTION_LABELS as TOC_LABELS,
+    RENDERED_SECTION_KEYS,
+    DIAGRAM_SECTION_KEYS,
+    section_order_from_rules,
+)
 
 logger = logging.getLogger("proposalcraft.export.html_renderer")
 
 TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "pdf"
 
-TOC_LABELS = {
-    "cover_page": "Cover Page",
-    "table_of_contents": "Table of Contents",
-    "executive_summary": "Executive Summary",
-    "about_company": "About Us",
-    "client_understanding": "Client Understanding",
-    "requirement_analysis": "Requirement Analysis",
-    "proposed_solution": "Proposed Solution",
-    "module_breakdown": "Module Breakdown",
-    "user_journey": "User Journey",
-    "technology_stack": "Technology Stack",
-    "ai_architecture": "AI Architecture",
-    "system_architecture": "System Architecture",
-    "database_design": "Database Design",
-    "security": "Security",
-    "methodology": "Methodology",
-    "timeline": "Timeline",
-    "deliverables": "Deliverables",
-    "pricing": "Investment",
-    "custom_development_charges": "Custom Development Charges",
-    "sla": "Service Level Agreement",
-    "support": "Support Plan",
-    "terms": "Terms & Conditions",
-    "case_studies": "Case Studies",
-    "team": "Team",
-    "conclusion": "Conclusion",
-    "diagrams": "Appendix A: Solution Architecture & Workflow",
-}
-
 NON_TOC_SECTIONS = {"cover_page", "table_of_contents"}
-
-DIAGRAM_SECTION_KEYS = ("workflow_diagram_svg", "architecture_diagram_svg", "timeline_diagram_svg")
 
 TOC_RENDERED_SECTIONS = {
     "about_company", "executive_summary", "client_understanding", "requirement_analysis",
@@ -52,22 +26,6 @@ TOC_RENDERED_SECTIONS = {
     "diagrams", "timeline", "pricing", "custom_development_charges", "sla", "support",
     "terms", "deliverables", "security", "methodology", "case_studies", "team", "conclusion",
 }
-
-RENDERED_SECTION_KEYS = {
-    "about_company", "executive_summary", "client_understanding", "requirement_analysis",
-    "proposed_solution", "module_breakdown", "technology_stack", "methodology", "timeline",
-    "deliverables", "pricing", "custom_development_charges", "sla", "support", "security",
-    "terms", "case_studies", "team", "conclusion", "diagrams",
-}
-
-
-def section_order_from_rules() -> list[str]:
-    """Derive render order from SECTION_RULES — the single source of truth."""
-    return [
-        key
-        for key, _ in sorted(SECTION_RULES.items(), key=lambda kv: kv[1].get("order", 999))
-        if key in RENDERED_SECTION_KEYS
-    ]
 
 
 class HTMLPDFRenderer(BaseRenderer):

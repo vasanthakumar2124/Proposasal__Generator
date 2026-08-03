@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { proposalsApi } from '../api/proposals'
-import type { ProposalCreateRequest, ProposalUpdateRequest } from '../types/proposal'
 
 export function useProposals(status?: string) {
   return useQuery({
@@ -14,22 +13,6 @@ export function useProposal(id: string) {
     queryKey: ['proposals', id],
     queryFn: () => proposalsApi.get(id),
     enabled: !!id,
-  })
-}
-
-export function useCreateProposal() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: ProposalCreateRequest) => proposalsApi.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['proposals'] }),
-  })
-}
-
-export function useUpdateProposal(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: ProposalUpdateRequest) => proposalsApi.update(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['proposals'] }),
   })
 }
 

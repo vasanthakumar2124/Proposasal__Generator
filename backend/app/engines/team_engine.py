@@ -44,6 +44,17 @@ class TeamEngine(BaseEngine):
         else:
             size = "large"
 
+        # Long engagements need a bigger team even with the same module count:
+        # staffing must cover sustained delivery, QA, and operations over time.
+        total_weeks = 0
+        for phase in (context.get("timeline_data") or {}).get("phases", []):
+            if isinstance(phase, dict):
+                total_weeks += phase.get("duration_weeks") or 0
+        if total_weeks >= 16 and size == "small":
+            size = "medium"
+        elif total_weeks >= 24 and size == "medium":
+            size = "large"
+
         scale = TEAM_SCALING[size]
         team_members = []
         for role_key in scale["roles"]:

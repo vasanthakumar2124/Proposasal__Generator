@@ -32,7 +32,7 @@ class ProposalContextBuilder(BaseEngine):
             "features": FeatureEngine(),
             "automation": AutomationEngine(),
             "integrations": IntegrationEngine(),
-            "tech_stack": TechStackEngine(),
+            "tech_stack": TechStackEngine(llm),
             "timeline": TimelineEngine(),
             "pricing": PricingEngine(),
             "team": TeamEngine(),
