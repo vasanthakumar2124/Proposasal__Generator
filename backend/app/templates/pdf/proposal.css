@@ -20,7 +20,7 @@ body {
 
 @page {
   size: A4;
-  margin: 25mm 20mm 30mm;
+  margin: 20mm 18mm 20mm;
   @top-left {
     content: element(header_left);
     font-size: var(--fs-header-footer);
@@ -214,10 +214,14 @@ body {
   font-size: var(--fs-body);
 }
 
-/* Sections */
+/* Sections — sections flow naturally across page boundaries so short
+   sections fill the page instead of jumping whole and leaving blank space.
+   Only small atomic blocks (tables, rows, case studies) refuse to split. */
 .section {
   margin-bottom: 28px;
-  page-break-inside: avoid;
+  page-break-inside: auto;
+  orphans: 3;
+  widows: 3;
 }
 
 .section h2 {
@@ -358,9 +362,6 @@ tr:nth-child(even) td {
 /* Diagrams — no page-break-inside: avoid here: SVGs are atomic replaced
    elements (they never split internally), so letting them flow lets multiple
    diagrams share a page instead of each forcing its own. */
-.section.appendix {
-  page-break-inside: auto;
-}
 
 .diagram-container {
   text-align: center;
@@ -400,6 +401,7 @@ tr:nth-child(even) td {
   margin-bottom: 18px;
   padding-bottom: 14px;
   border-bottom: 1px solid #e5e7eb;
+  page-break-inside: avoid;
 }
 
 .case-study h3 {

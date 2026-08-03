@@ -44,8 +44,11 @@ class GeneratedProposalService:
         error = final_state.get("error")
         business_context = final_state.get("business_context")
 
-        rubric_check = None
-        if isinstance(proposal_content, dict):
+        # The rubric runs as an in-graph quality gate (rubric_check node) so it
+        # can block/improve output. Here we only persist its result; a final
+        # pass runs only if the workflow never reached the rubric node.
+        rubric_check = final_state.get("rubric_result") if isinstance(final_state, dict) else None
+        if rubric_check is None and isinstance(proposal_content, dict):
             try:
                 from app.agents.rubric_checker import check_proposal
 
@@ -56,8 +59,18 @@ class GeneratedProposalService:
                     "placeholder_sections": rubric_result.placeholder_sections,
                     "number_mismatches": rubric_result.number_mismatches,
                     "word_count_issues": rubric_result.word_count_issues,
+                    "density_issues": rubric_result.density_issues,
+                    "genericness_issues": rubric_result.genericness_issues,
+                    "issues": (
+                        rubric_result.missing_sections
+                        + rubric_result.placeholder_sections
+                        + rubric_result.number_mismatches
+                        + rubric_result.word_count_issues
+                        + rubric_result.density_issues
+                        + rubric_result.genericness_issues
+                    ),
                 }
-                logger.info("Rubric check result: %s", rubric_result)
+                logger.info("Rubric check result (post-graph fallback): %s", rubric_result)
             except Exception as e:
                 logger.warning("Rubric check failed: %s", e, exc_info=True)
 

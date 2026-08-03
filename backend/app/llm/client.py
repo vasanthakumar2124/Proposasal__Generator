@@ -78,12 +78,15 @@ class LLMClient:
         start = time.time()
         input_tokens = estimate_tokens(prompt)
 
-        prompt_limit = max(500, 5000 - max_tokens)
+        # All routed models (gpt-4o-mini, llama-3.3-70b, llama-3.1-8b, ollama 8b)
+        # support large contexts, so the input budget is generous: the writer's
+        # grounding rules must actually reach the model instead of being cut off.
+        prompt_limit = max(500, 24000 - max_tokens)
         truncated = truncate_to_max_tokens(prompt, prompt_limit)
         char_limit = prompt_limit * 5
         if len(truncated) > char_limit:
             truncated = truncated[:char_limit]
-        actual_max = min(max_tokens, 4096)
+        actual_max = min(max_tokens, 8192)
 
         if config.provider == "groq":
             content = self._call_groq(config.model, truncated, actual_max, temperature)
