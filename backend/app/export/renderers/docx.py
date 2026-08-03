@@ -2,10 +2,11 @@ import logging
 from pathlib import Path
 
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from app.export.renderers.base import BaseRenderer
+from app.export.renderers.common import iter_renderable_sections, build_section_blocks
 
 logger = logging.getLogger("proposalcraft.export.docx")
 
@@ -21,22 +22,12 @@ class DOCXRenderer(BaseRenderer):
 
         self._add_cover(doc, proposal.get("metadata", {}))
 
-        sections = [
-            ("Executive Summary", "executive_summary"),
-            ("Proposed Solution", "proposed_solution"),
-            ("Modules", "module_breakdown"),
-            ("Technology Stack", "technology_stack"),
-            ("Timeline", "timeline"),
-            ("Investment", "pricing"),
-            ("Support", "support"),
-            ("Team", "team"),
-        ]
-
-        for title, key in sections:
-            data = proposal.get(key)
-            if data:
+        first = True
+        for key, title, data in iter_renderable_sections(proposal):
+            if not first:
                 doc.add_page_break()
-                self._add_section(doc, title, data)
+            first = False
+            self._add_section(doc, title, build_section_blocks(key, data))
 
         path = Path(output_path).with_suffix(".docx")
         doc.save(str(path))
@@ -72,40 +63,33 @@ class DOCXRenderer(BaseRenderer):
                 run = p.add_run(f"{label}: {val}")
                 run.font.size = Pt(11)
 
-    def _add_section(self, doc: Document, title: str, data: dict | list):
+    def _add_section(self, doc: Document, title: str, blocks: list[tuple]):
         heading = doc.add_heading(title, level=1)
         for run in heading.runs:
             run.font.color.rgb = RGBColor(26, 86, 219)
 
-        if isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    name = item.get("name", item.get("role", str(item)))
-                    desc = item.get("description", item.get("experience", ""))
-                    p = doc.add_paragraph(f"• {name}" + (f": {desc}" if desc else ""), style="List Bullet")
-                else:
-                    doc.add_paragraph(f"• {item}", style="List Bullet")
-        elif isinstance(data, dict):
-            for key, val in data.items():
-                if val:
-                    if isinstance(val, list):
-                        p = doc.add_paragraph()
-                        run = p.add_run(f"{key.replace('_', ' ').title()}: ")
-                        run.bold = True
-                        items = []
-                        for item in val:
-                            if isinstance(item, dict):
-                                items.append(item.get("name", item.get("module_name", str(item))))
-                            else:
-                                items.append(str(item))
-                        p.add_run(", ".join(items))
-                    elif isinstance(val, dict):
-                        p = doc.add_paragraph()
-                        run = p.add_run(f"{key.replace('_', ' ').title()}: ")
-                        run.bold = True
-                        p.add_run(str(val))
-                    else:
-                        p = doc.add_paragraph()
-                        run = p.add_run(f"{key.replace('_', ' ').title()}: ")
-                        run.bold = True
-                        p.add_run(str(val))
+        for block in blocks:
+            kind = block[0]
+            if kind == "h3":
+                h = doc.add_heading(block[1], level=2)
+                for run in h.runs:
+                    run.font.color.rgb = RGBColor(26, 86, 219)
+            elif kind == "p":
+                doc.add_paragraph(block[1])
+            elif kind == "bullets":
+                for item in block[1]:
+                    doc.add_paragraph(item, style="List Bullet")
+            elif kind == "table":
+                headers, rows = block[1], block[2]
+                table = doc.add_table(rows=1, cols=len(headers))
+                table.style = "Light Grid Accent 1"
+                for i, htext in enumerate(headers):
+                    cell = table.rows[0].cells[i]
+                    cell.text = htext
+                    for run in cell.paragraphs[0].runs:
+                        run.font.bold = True
+                for row in rows:
+                    cells = table.add_row().cells
+                    for i, value in enumerate(row):
+                        if i < len(cells):
+                            cells[i].text = str(value)

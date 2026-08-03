@@ -2,8 +2,8 @@
 from typing import Optional
 from uuid import uuid4
 
-from qdrant_client import QdrantClient, models
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, ScoredPoint
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter
 
 from app.config.settings import settings
 from app.llm.embeddings import embedding_service

@@ -46,7 +46,7 @@
 {% for key in section_order %}
 
 {% if key == "about_company" and about_company %}
-<div id="sec-about_company" class="section page-break">
+<div id="sec-about_company" class="section">
   <h2>About Us</h2>
   {% if about_company.who_we_are %}<p>{{ about_company.who_we_are }}</p>{% endif %}
   {% if about_company.experience %}<h3>Experience</h3><p>{{ about_company.experience }}</p>{% endif %}
@@ -147,11 +147,14 @@
   <table>
     <thead><tr><th>Layer</th><th>Technologies</th></tr></thead>
     <tbody>
-    {% for layer, techs in technology_stack.items() if techs %}
+    {% for layer, techs in technology_stack.items() if techs and layer != "rationale" %}
     <tr><td>{{ layer|replace("_", " ")|title }}</td><td>{{ techs|join(", ") }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
+  {% if technology_stack.rationale %}
+  <p><strong>Why this stack:</strong> {{ technology_stack.rationale }}</p>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -192,7 +195,7 @@
 
 {% if key == "timeline" and timeline %}
 {% set week_detail = timeline.phases and timeline.phases[0].output is defined %}
-<div id="sec-timeline" class="section">
+<div id="sec-timeline" class="section page-break">
   <h2>Timeline</h2>
   {% if timeline.phases %}
   {% if week_detail %}
@@ -227,7 +230,7 @@
 {% endif %}
 
 {% if key == "pricing" and pricing %}
-<div id="sec-pricing" class="section pricing-section">
+<div id="sec-pricing" class="section page-break pricing-section">
   <h2>Investment</h2>
   {% if pricing.one_time_cost or pricing.monthly_cost %}
   <table class="pricing-table">

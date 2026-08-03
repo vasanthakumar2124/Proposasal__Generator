@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 
 from app.domain.entities.user import User
-from app.domain.exceptions import TokenExpiredError, TokenInvalidError, AuthorizationError
+from app.domain.exceptions import TokenExpiredError, TokenInvalidError
 from app.infrastructure.auth.jwt import verify_access_token
 from app.services.auth_service import AuthService
 from app.config.constants import DEFAULT_PERMISSIONS

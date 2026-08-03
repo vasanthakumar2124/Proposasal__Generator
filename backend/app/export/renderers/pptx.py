@@ -7,6 +7,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 
 from app.export.renderers.base import BaseRenderer
+from app.export.renderers.common import iter_renderable_sections, build_section_blocks
 
 logger = logging.getLogger("proposalcraft.export.pptx")
 
@@ -25,20 +26,8 @@ class PPTXRenderer(BaseRenderer):
 
         self._add_cover_slide(prs, proposal.get("metadata", {}))
 
-        sections = [
-            ("Executive Summary", "executive_summary"),
-            ("Proposed Solution", "proposed_solution"),
-            ("Modules", "module_breakdown"),
-            ("Technology Stack", "technology_stack"),
-            ("Timeline", "timeline"),
-            ("Investment", "pricing"),
-            ("Team", "team"),
-        ]
-
-        for title, key in sections:
-            data = proposal.get(key)
-            if data:
-                self._add_section_slide(prs, title, data)
+        for key, title, data in iter_renderable_sections(proposal):
+            self._add_section_slide(prs, title, build_section_blocks(key, data))
 
         path = Path(output_path).with_suffix(".pptx")
         prs.save(str(path))
@@ -47,8 +36,7 @@ class PPTXRenderer(BaseRenderer):
 
     def _add_cover_slide(self, prs: Presentation, meta: dict):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
-        bg = slide.background
-        fill = bg.fill
+        fill = slide.background.fill
         fill.solid()
         fill.fore_color.rgb = RGBColor(240, 244, 255)
 
@@ -83,7 +71,7 @@ class PPTXRenderer(BaseRenderer):
                 p4.font.color.rgb = DARK
                 p4.alignment = PP_ALIGN.CENTER
 
-    def _add_section_slide(self, prs: Presentation, title: str, data: dict | list):
+    def _add_section_slide(self, prs: Presentation, title: str, blocks: list[tuple]):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
 
         txBox = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(1))
@@ -98,38 +86,45 @@ class PPTXRenderer(BaseRenderer):
         ctf = content_box.text_frame
         ctf.word_wrap = True
 
-        if isinstance(data, list):
-            for item in data:
-                p = ctf.add_paragraph()
-                if isinstance(item, dict):
-                    name = item.get("name", item.get("role", str(item)))
-                    desc = item.get("description", item.get("experience", ""))
-                    p.text = f"• {name}" + (f": {desc}" if desc else "")
-                else:
-                    p.text = f"• {item}"
-                p.font.size = Pt(16)
-                p.font.color.rgb = DARK
-                p.space_after = Pt(4)
-        elif isinstance(data, dict):
-            for key, val in data.items():
-                if val:
-                    p = ctf.add_paragraph()
-                    if isinstance(val, list):
-                        items = []
-                        for item in val:
-                            if isinstance(item, dict):
-                                items.append(item.get("name", item.get("module_name", str(item))))
-                            else:
-                                items.append(str(item))
-                        p.text = f"{key.replace('_', ' ').title()}: {', '.join(items)}"
-                    elif isinstance(val, dict):
-                        p.text = f"{key.replace('_', ' ').title()}: {str(val)}"
-                    else:
-                        p.text = f"{key.replace('_', ' ').title()}: {val}"
-                    p.font.size = Pt(16)
-                    p.font.color.rgb = DARK
-                    p.space_after = Pt(4)
+        first_para = True
+        for block in blocks:
+            kind = block[0]
+            if kind == "h3":
+                para = ctf.add_paragraph()
+                para.text = block[1]
+                para.font.size = Pt(20)
+                para.font.color.rgb = BLUE
+                para.font.bold = True
+                para.space_before = Pt(8)
+                para.space_after = Pt(2)
+            elif kind == "p":
+                para = ctf.add_paragraph()
+                para.text = block[1]
+                para.font.size = Pt(14)
+                para.font.color.rgb = DARK
+                para.space_after = Pt(4)
+            elif kind == "bullets":
+                for item in block[1]:
+                    para = ctf.add_paragraph()
+                    para.text = f"• {item}"
+                    para.font.size = Pt(14)
+                    para.font.color.rgb = DARK
+                    para.space_after = Pt(2)
+            elif kind == "table":
+                headers, rows = block[1], block[2]
+                para = ctf.add_paragraph()
+                para.text = " | ".join(str(h) for h in headers)
+                para.font.size = Pt(12)
+                para.font.bold = True
+                para.space_after = Pt(2)
+                for row in rows:
+                    para = ctf.add_paragraph()
+                    para.text = " | ".join(str(v) for v in row)
+                    para.font.size = Pt(12)
+                    para.font.color.rgb = DARK
+                    para.space_after = Pt(1)
+            first_para = False
 
-        if ctf.paragraphs[0].text == "":
+        if first_para:
             ctf.paragraphs[0].text = title
             ctf.paragraphs[0].font.size = Pt(24)

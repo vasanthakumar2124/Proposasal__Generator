@@ -26,7 +26,7 @@ class RAGAgent(BaseAgent):
                     "domain_insights": [],
                     "technical_insights": [],
                     "best_practices": [],
-                    "relevant_case_studies": [],
+                    "relevant_case_studies": self._case_studies_from_chunks(state),
                     "key_considerations": [],
                 },
             }
@@ -57,7 +57,24 @@ class RAGAgent(BaseAgent):
                 "key_considerations": [],
             }
 
+        result = dict(result or {})
+        if not (result.get("relevant_case_studies") or []):
+            result["relevant_case_studies"] = self._case_studies_from_chunks(state)
+
         return {
             **state,
             "rag_context": result,
         }
+
+    @staticmethod
+    def _case_studies_from_chunks(state: dict) -> list[dict]:
+        chunks = state.get("case_study_chunks") or []
+        studies = []
+        for chunk in chunks[:2]:
+            text = chunk if isinstance(chunk, str) else str(chunk.get("content", chunk))
+            text = text.strip()
+            if not text:
+                continue
+            title = text.split(".")[0].strip()[:60] or "Case Study"
+            studies.append({"title": title, "description": text})
+        return studies

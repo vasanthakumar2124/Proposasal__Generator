@@ -227,17 +227,12 @@ body {
   margin-bottom: 24px;
   font-size: var(--fs-h2);
   font-weight: 700;
-  page-break-before: always;
   counter-increment: section;
 }
 
 .section h2::before {
   content: counter(section) ". ";
   color: #1a56db;
-}
-
-.section h2.no-break {
-  page-break-before: avoid;
 }
 
 .section h2.no-number::before {
@@ -266,6 +261,8 @@ body {
   margin-bottom: 12px;
   text-align: justify;
   line-height: 1.5;
+  orphans: 3;
+  widows: 3;
 }
 
 .section ul, .section ol {
@@ -326,6 +323,11 @@ table {
   border-collapse: collapse;
   margin: 14px 0;
   font-size: var(--fs-table);
+  page-break-inside: avoid;
+}
+
+tr {
+  page-break-inside: avoid;
 }
 
 th, td {
@@ -353,11 +355,16 @@ tr:nth-child(even) td {
   background: #dbeafe;
 }
 
-/* Diagrams */
+/* Diagrams — no page-break-inside: avoid here: SVGs are atomic replaced
+   elements (they never split internally), so letting them flow lets multiple
+   diagrams share a page instead of each forcing its own. */
+.section.appendix {
+  page-break-inside: auto;
+}
+
 .diagram-container {
   text-align: center;
   margin: 24px 0;
-  page-break-inside: avoid;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 16px;

@@ -5,11 +5,3 @@ export const analyticsApi = {
 
   getAdminDashboard: () => apiClient.get('/analytics/admin/dashboard'),
 }
-
-export const adminApi = {
-  getHealth: () => apiClient.get('/admin/health'),
-
-  listUsers: () => apiClient.get('/admin/users'),
-
-  listOrganizations: () => apiClient.get('/admin/organizations'),
-}

@@ -8,7 +8,7 @@ from typing import Optional
 logger = logging.getLogger("proposalcraft.proposals_router")
 
 from app.domain.entities.user import User
-from app.schemas.proposal import ProposalCreateRequest, ProposalUpdateRequest, ProposalSectionUpdateRequest, ProposalResponse
+from app.schemas.proposal import ProposalCreateRequest, ProposalUpdateRequest, ProposalResponse
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.proposal_service import ProposalService
 from app.services.generated_proposal_service import GeneratedProposalService
