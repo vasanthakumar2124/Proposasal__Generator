@@ -7,12 +7,44 @@ from app.templates.section_rules import SECTION_RULES
 logger = logging.getLogger("proposalcraft.rubric_checker")
 
 PLACEHOLDER_PATTERNS = re.compile(
-    r"\b(not specified|tbd|to be determined|to be decided|lorem ipsum|todo|n/a|none)\b",
+    r"(\b(not specified|tbd|to be determined|to be decided|lorem ipsum|todo|n/a|none)\b|\[[^\]]{1,40}\])",
     re.IGNORECASE,
 )
 
 _PLACEHOLDER_STRINGS = {"", "not specified", "tbd", "to be determined", "to be decided", "lorem ipsum", "todo", "n/a", "none"}
 _PLACEHOLDER_NUMBERS = {0, 0.0}
+
+# LLM-written narrative sections (prose-heavy). These must be substantial:
+# 5-7 sentences per field per the writer prompt, so a 120-word floor only
+# catches genuinely truncated output.
+NARRATIVE_SECTIONS = {
+    "executive_summary",
+    "client_understanding",
+    "proposed_solution",
+    "security",
+    "terms",
+}
+NARRATIVE_MIN_WORDS = 120
+# Structurally dense sections (tables/lists) need less prose but still a floor.
+STRUCTURAL_MIN_WORDS = 60
+
+# Estimated rendered words per full A4 page at 12pt body / 1.65 line-height
+# with the current 20mm 18mm 20mm margins.
+TARGET_WORDS_PER_PAGE = 400
+DENSITY_MIN_FILL = 0.5
+
+# Phrases the writer prompt already prohibits — enforced here so a violation
+# becomes a retry signal instead of just a prompt rule.
+BANNED_GENERIC_PHRASES = [
+    "state-of-the-art",
+    "state of the art",
+    "seamless user experience",
+    "robust functionality",
+    "best-in-class",
+    "best in class",
+    "industry-leading",
+    "industry leading",
+]
 
 
 def _is_placeholder(val: Any) -> bool:
@@ -35,6 +67,8 @@ class RubricCheckResult:
         self.placeholder_sections: list[str] = []
         self.number_mismatches: list[str] = []
         self.word_count_issues: list[str] = []
+        self.density_issues: list[str] = []
+        self.genericness_issues: list[str] = []
         self.passed: bool = True
 
     def fail(self) -> bool:
@@ -55,6 +89,10 @@ class RubricCheckResult:
             issues.append(f"num_mismatch={self.number_mismatches}")
         if self.word_count_issues:
             issues.append(f"wc_issues={self.word_count_issues}")
+        if self.density_issues:
+            issues.append(f"density_issues={self.density_issues}")
+        if self.genericness_issues:
+            issues.append(f"generic_issues={self.genericness_issues}")
         return f"RubricCheckResult(passed={self.passed}, {'; '.join(issues)})" if issues else f"RubricCheckResult(passed={self.passed})"
 
 
@@ -117,7 +155,7 @@ def numbers_match_engine_output(document: dict, engine_context: dict) -> list[st
     return mismatches
 
 
-def check_word_count(document: dict, min_words: int = 40, max_words: int = 5000) -> list[str]:
+def check_word_count(document: dict, min_words: int = 120, max_words: int = 5000) -> list[str]:
     sections = document.get("sections", document)
     rules = SECTION_RULES
     issues = []
@@ -128,11 +166,55 @@ def check_word_count(document: dict, min_words: int = 40, max_words: int = 5000)
         text = _section_to_text(sec_data)
         word_count = len(text.split())
         is_llm_written = rule is None or rule.get("generated_by") == "llm"
-        if is_llm_written and word_count < min_words and sec_name != "conclusion":
-            issues.append(f"{sec_name}: {word_count} words (min {min_words})")
+        if not is_llm_written:
+            continue
+        if sec_name == "conclusion":
+            continue
+        floor = NARRATIVE_MIN_WORDS if sec_name in NARRATIVE_SECTIONS else STRUCTURAL_MIN_WORDS
+        if word_count < floor:
+            issues.append(f"{sec_name}: {word_count} words (min {floor})")
         if word_count > max_words:
             issues.append(f"{sec_name}: {word_count} words (max {max_words})")
     return issues
+
+
+def check_section_density(
+    document: dict,
+    target_words_per_page: int = TARGET_WORDS_PER_PAGE,
+    min_fill: float = DENSITY_MIN_FILL,
+) -> list[str]:
+    """Estimate rendered page fill per narrative section (word count vs a full
+    A4 page) and flag any section under ~50% fill so the writer gets a retry
+    signal instead of shipping a sparse section."""
+    sections = document.get("sections", document)
+    issues = []
+    for sec_name in sorted(NARRATIVE_SECTIONS | {"about_company"}):
+        sec_data = sections.get(sec_name)
+        if sec_data is None:
+            continue
+        text = _section_to_text(sec_data)
+        word_count = len(text.split())
+        fill = word_count / target_words_per_page
+        if fill < min_fill:
+            issues.append(
+                f"{sec_name}: {word_count} words (~{fill:.0%} page fill, min {min_fill:.0%})"
+            )
+    return issues
+
+
+def check_generic_phrases(document: dict, max_hits: int = 1) -> list[str]:
+    """Flag sections containing 2+ banned generic phrases. The writer prompt
+    already prohibits these; this turns the rule into an enforceable check."""
+    sections = document.get("sections", document)
+    flagged = []
+    for sec_name, sec_data in sections.items():
+        if sec_name in ("cover_page", "table_of_contents"):
+            continue
+        text = _section_to_text(sec_data).lower()
+        hits = sum(phrase in text for phrase in BANNED_GENERIC_PHRASES)
+        if hits > max_hits:
+            flagged.append(f"{sec_name}: {hits} banned generic phrases")
+    return flagged
 
 
 def check_proposal(document: dict, engine_context: dict | None = None) -> RubricCheckResult:
@@ -157,6 +239,16 @@ def check_proposal(document: dict, engine_context: dict | None = None) -> Rubric
     wc_issues = check_word_count(document)
     if wc_issues:
         result.word_count_issues = wc_issues
+        result.fail()
+
+    density_issues = check_section_density(document)
+    if density_issues:
+        result.density_issues = density_issues
+        result.fail()
+
+    generic_issues = check_generic_phrases(document)
+    if generic_issues:
+        result.genericness_issues = generic_issues
         result.fail()
 
     return result

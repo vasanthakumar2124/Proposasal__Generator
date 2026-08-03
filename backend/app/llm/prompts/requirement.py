@@ -22,3 +22,28 @@ Output valid JSON with these exact keys:
 Client input:
 {client_input}
 """
+
+REQUIREMENT_ENRICHMENT_TEMPLATE = """The client input for this {project_type} project was thin, so the
+extracted requirements need clearly-labeled assumptions to work with.
+
+Project domain: {domain}
+Description: {description}
+Core features: {core_features}
+
+Infer reasonable assumptions a professional agency would make for this type
+of project. Mark each as an assumption so the proposal can say
+"based on typical {domain} projects, we assume ..." rather than writing
+vague generic prose.
+
+Output valid JSON:
+{{
+  "assumptions": [
+    "Assumption: ... (each a full sentence, grounded in the stated domain and project type)"
+  ]
+}}
+
+Rules:
+- 3-6 assumptions, each phrased as "Assumption: ...".
+- Ground each one in the stated domain/project type; never copy generic boilerplate.
+- Do not assume numbers (budgets, costs, durations) that were not stated.
+"""

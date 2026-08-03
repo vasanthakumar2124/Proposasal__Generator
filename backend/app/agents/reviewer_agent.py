@@ -12,6 +12,7 @@ class ReviewerAgent(BaseAgent):
 
     def run(self, state: dict) -> dict:
         proposal = state.get("proposal_draft", {})
+        rubric_issues = state.get("rubric_issues") or []
 
         if not proposal or (isinstance(proposal, dict) and "_parse_error" in proposal):
             logger.warning("No valid proposal to review, returning state unchanged")
@@ -33,11 +34,17 @@ class ReviewerAgent(BaseAgent):
             }
 
         try:
+            rubric_section = (
+                "\n".join(f"- {i}" for i in rubric_issues)
+                if rubric_issues
+                else "None"
+            )
             prompt = f"{REVIEWER_SYSTEM_PROMPT}\n\n{PROPOSAL_REVIEWER_TEMPLATE.format(
                 proposal_json=json.dumps(proposal, indent=2),
+                rubric_issues_section=rubric_section,
             )}"
 
-            result = self._llm_json(prompt, complexity="medium", max_tokens=4096)
+            result = self._llm_json(prompt, complexity="medium", max_tokens=8192)
         except Exception as e:
             logger.error("Reviewer agent LLM call failed: %s", e)
             result = {"_parse_error": str(e)}

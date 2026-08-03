@@ -9,4 +9,7 @@ class ProposalState(TypedDict):
     proposal_draft: Optional[dict]
     review: Optional[dict]
     final_proposal: Optional[dict]
+    rubric_result: Optional[dict]
+    rubric_issues: Optional[list]
+    rubric_retries: Optional[int]
     error: Optional[str]
