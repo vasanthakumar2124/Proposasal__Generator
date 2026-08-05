@@ -11,7 +11,12 @@ from app.domain.exceptions import (
     TokenExpiredError,
 )
 from app.domain.interfaces import UserRepository, OrganizationRepository
-from app.infrastructure.auth.jwt import create_access_token, create_refresh_token, verify_access_token
+from app.infrastructure.auth.jwt import (
+    create_access_token,
+    create_refresh_token,
+    verify_access_token,
+    verify_refresh_token,
+)
 from app.infrastructure.auth.password import hash_password, verify_password
 from app.infrastructure.log.audit import create_audit_log
 from app.infrastructure.database.mongo_repositories.user_repo import MongoUserRepository
@@ -95,11 +100,9 @@ class AuthService:
 
     async def refresh_token(self, refresh_token: str) -> tuple[str, str]:
         try:
-            payload = verify_access_token(refresh_token)
-        except TokenExpiredError:
-            raise TokenExpiredError("Refresh token expired")
-        except TokenInvalidError:
-            raise TokenInvalidError("Invalid refresh token")
+            payload = verify_refresh_token(refresh_token)
+        except (TokenExpiredError, TokenInvalidError) as e:
+            raise InvalidCredentialsError(str(e))
 
         user_id = payload.get("sub")
         user = await self.user_repo.get_by_id(user_id)

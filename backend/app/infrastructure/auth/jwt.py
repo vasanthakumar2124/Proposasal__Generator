@@ -37,3 +37,13 @@ def verify_access_token(token: str) -> dict:
     if exp and datetime.now(timezone.utc).timestamp() > exp:
         raise TokenExpiredError("Access token expired")
     return payload
+
+
+def verify_refresh_token(token: str) -> dict:
+    payload = decode_token(token)
+    if payload.get("type") != "refresh":
+        raise TokenInvalidError("Invalid token type")
+    exp = payload.get("exp")
+    if exp and datetime.now(timezone.utc).timestamp() > exp:
+        raise TokenExpiredError("Refresh token expired")
+    return payload

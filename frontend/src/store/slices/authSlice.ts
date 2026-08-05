@@ -57,8 +57,12 @@ export const fetchCurrentUser = createAsyncThunk(
       const response = await authApi.getMe()
       return response.data
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      return rejectWithValue(error.response?.data?.detail || 'Failed to fetch user')
+      const error = err as { response?: { status?: number; data?: { detail?: string } } }
+      const authFailure = error.response?.status === 401 || error.response?.status === 403
+      return rejectWithValue({
+        authFailure,
+        message: error.response?.data?.detail || 'Failed to fetch user',
+      })
     }
   }
 )
@@ -117,13 +121,19 @@ const authSlice = createSlice({
         state.isAuthenticated = true
         state.loading = false
       })
-      .addCase(fetchCurrentUser.rejected, (state) => {
-        state.user = null
-        state.isAuthenticated = false
-        state.accessToken = null
-        state.refreshToken = null
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
+      .addCase(fetchCurrentUser.rejected, (state, action) => {
+        // Only end the session when the backend actually rejected the token
+        // (401/403). Transient failures (network, 500) must not log the user
+        // out — the next request will retry.
+        const payload = action.payload as { authFailure?: boolean } | undefined
+        if (payload?.authFailure) {
+          state.user = null
+          state.isAuthenticated = false
+          state.accessToken = null
+          state.refreshToken = null
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+        }
       })
   },
 })
