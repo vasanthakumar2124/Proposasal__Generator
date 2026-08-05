@@ -6,8 +6,6 @@ import {
   FileText,
   FolderOpen,
   Users,
-  Library,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -24,10 +22,8 @@ const navItems = [
   { to: '/clients', icon: Users, label: 'Clients' },
   { to: '/generate', icon: Sparkles, label: 'Generate' },
   { to: '/history', icon: ScrollText, label: 'Proposals' },
-  { to: '/templates', icon: Library, label: 'Templates' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/billing', icon: CreditCard, label: 'Billing' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 interface SidebarProps {

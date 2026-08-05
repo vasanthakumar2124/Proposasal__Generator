@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr, field_validator
 
-from app.config.constants import UserRole
+from app.config.constants import UserRole, DEFAULT_PERMISSIONS
 
 
 class User(BaseModel):
@@ -29,7 +29,12 @@ class User(BaseModel):
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
     def has_permission(self, permission: str) -> bool:
-        return permission in self.permissions
+        if permission in self.permissions:
+            return True
+        # Fall back to the role's defaults so users whose permission lists
+        # were stored before the constants grew (e.g. project:* added later)
+        # still gain access without a data migration.
+        return permission in DEFAULT_PERMISSIONS.get(self.role, [])
 
     def is_admin(self) -> bool:
         return self.role == UserRole.ADMIN

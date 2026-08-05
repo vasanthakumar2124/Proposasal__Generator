@@ -1,28 +1,50 @@
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAppSelector } from '../store/hooks'
+import { analyticsApi } from '../api/analytics'
+import { proposalsApi } from '../api/proposals'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
-import { FileText, Users, TrendingUp, Clock, Plus, Sparkles } from 'lucide-react'
+import { Skeleton } from '../components/ui/Skeleton'
+import { FileText, Users, TrendingUp, FolderOpen, Plus, Sparkles } from 'lucide-react'
 
-const stats = [
-  { label: 'Total Proposals', value: '12', icon: FileText, change: '+2 this week' },
-  { label: 'Active Clients', value: '8', icon: Users, change: '+1 this month' },
-  { label: 'Win Rate', value: '75%', icon: TrendingUp, change: '+5% vs last quarter' },
-  { label: 'In Review', value: '3', icon: Clock, change: '2 pending approval' },
-]
-
-const recentProposals = [
-  { id: '1', name: 'Healthcare CRM Platform', client: 'MediCorp', status: 'completed', date: '2026-07-28' },
-  { id: '2', name: 'ERP Modernization', client: 'BuildWell Inc.', status: 'generating', date: '2026-07-27' },
-  { id: '3', name: 'Mobile Banking App', client: 'FinSecure', status: 'draft', date: '2026-07-25' },
-  { id: '4', name: 'E-Learning Platform', client: 'EduGlobal', status: 'review', date: '2026-07-22' },
-  { id: '5', name: 'Retail POS System', client: 'ShopMax', status: 'sent', date: '2026-07-20' },
-]
+const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'default' | 'secondary' | 'outline'> = {
+  completed: 'success',
+  approved: 'success',
+  sent: 'secondary',
+  draft: 'outline',
+  review: 'default',
+  generating: 'warning',
+  processing: 'warning',
+  error: 'warning',
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAppSelector((state) => state.auth)
+
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['analytics-dashboard'],
+    queryFn: () => analyticsApi.getDashboard(),
+  })
+
+  const { data: proposalsData, isLoading: proposalsLoading } = useQuery({
+    queryKey: ['proposals', undefined],
+    queryFn: () => proposalsApi.list(0, 10),
+  })
+
+  const stats = analytics?.data?.stats || analytics?.data?.data?.stats || {}
+  const recentProposals = proposalsData?.data?.items || []
+
+  const statCards = [
+    { label: 'Total Proposals', value: stats.total_proposals ?? 0, icon: FileText, change: 'All time' },
+    { label: 'Recent (30d)', value: stats.recent_proposals_30d ?? 0, icon: TrendingUp, change: 'Last 30 days' },
+    { label: 'Active Clients', value: stats.total_clients ?? 0, icon: Users, change: 'All time' },
+    { label: 'Projects', value: stats.total_projects ?? 0, icon: FolderOpen, change: 'All time' },
+  ]
+
+  const loading = analyticsLoading && proposalsLoading
 
   return (
     <div className="space-y-6">
@@ -47,56 +69,73 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.change}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {statCards.map((stat) => (
+            <Card key={stat.label}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.label}
+                </CardTitle>
+                <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">{stat.change}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>Recent Proposals</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {recentProposals.map((proposal) => (
-              <div
-                key={proposal.id}
-                className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer"
-                onClick={() => navigate(`/proposals/${proposal.id}`)}
-              >
-                <div className="flex-1">
-                  <p className="font-medium">{proposal.name}</p>
-                  <p className="text-sm text-muted-foreground">{proposal.client}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant={
-                      proposal.status === 'completed' ? 'success' :
-                      proposal.status === 'generating' ? 'warning' :
-                      proposal.status === 'review' ? 'default' :
-                      proposal.status === 'sent' ? 'secondary' :
-                      'outline'
-                    }
-                  >
+          {proposalsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-14" />
+              ))}
+            </div>
+          ) : recentProposals.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground">No proposals yet. Generate your first one!</p>
+              <Button onClick={() => navigate('/generate')} className="mt-4">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Proposal
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentProposals.map((proposal: {
+                _id: string; title: string; status: string; created_at: string
+              }) => (
+                <div
+                  key={proposal._id}
+                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                  onClick={() => navigate(`/proposals/${proposal._id}`)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{proposal.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(proposal.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge variant={STATUS_VARIANTS[proposal.status] || 'outline'}>
                     {proposal.status}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">{proposal.date}</span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
