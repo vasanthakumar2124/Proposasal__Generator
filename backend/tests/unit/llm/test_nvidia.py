@@ -2,10 +2,10 @@ from app.llm.models import MODEL_REGISTRY, TASK_MODEL_MAP
 
 
 class TestNvidiaIntegration:
-    def test_nvidia_registered_with_nemotron_super(self):
+    def test_nvidia_registered_with_fast_model(self):
         cfg = MODEL_REGISTRY["nvidia"]
-        assert cfg["default"].model == "nvidia/llama-3.3-nemotron-super-49b-v1.5"
-        assert cfg["fast"].model == "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+        assert cfg["default"].model == "meta/llama-3.1-8b-instruct"
+        assert cfg["fast"].model == "meta/llama-3.1-8b-instruct"
         assert cfg["default"].provider == "nvidia"
 
     def test_medium_chain_has_nvidia_after_groq_default(self):

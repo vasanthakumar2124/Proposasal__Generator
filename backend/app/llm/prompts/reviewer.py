@@ -47,6 +47,9 @@ Rules:
 Rubric findings to fix specifically:
 {rubric_issues_section}
 
+Rubric findings to fix specifically:
+{rubric_issues_section}
+
 Proposal to review:
 {proposal_json}
 """
