@@ -13,6 +13,7 @@ async def connect_to_redis() -> None:
         settings.REDIS_URL,
         decode_responses=True,
         max_connections=20,
+        protocol=2,
     )
     await redis_client.ping()
 

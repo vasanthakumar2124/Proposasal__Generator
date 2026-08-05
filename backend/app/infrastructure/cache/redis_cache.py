@@ -24,6 +24,7 @@ class RedisCache:
                     decode_responses=True,
                     socket_connect_timeout=2,
                     socket_timeout=2,
+                    protocol=2,
                 )
                 self._client.ping()
                 logger.info("Redis cache connected")

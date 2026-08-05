@@ -35,5 +35,11 @@ class LLMCache:
     def clear(self) -> None:
         pass
 
+    def delete(self, prompt: str, model_key: str) -> None:
+        if not self._enabled:
+            return
+        key = self._make_key(prompt, model_key)
+        redis_cache.delete(key)
+
 
 llm_cache = LLMCache()
