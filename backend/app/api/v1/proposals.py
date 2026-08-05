@@ -15,6 +15,7 @@ from app.services.generated_proposal_service import GeneratedProposalService
 from app.export.service import export_service
 from app.export.normalize import normalize_proposal
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.workers.tasks import generate_proposal_task
 
 router = APIRouter()
 
@@ -165,15 +166,27 @@ async def generate_proposal(
         org_id=org_id,
         user_id=user.id,
     )
-    background_tasks.add_task(
-        svc.run_and_finalize,
-        doc["_id"],
-        body.get("client_input", ""),
-        org_id,
-        user.id,
-        body.get("domain"),
-        body.get("project_type"),
-    )
+    try:
+        generate_proposal_task.delay(
+            doc["_id"],
+            body.get("client_input", ""),
+            org_id,
+            user.id,
+            body.get("domain"),
+            body.get("project_type"),
+        )
+        logger.info("Proposal %s enqueued to celery", doc["_id"])
+    except Exception as e:
+        logger.warning("Celery enqueue failed, falling back to in-process task: %s", e)
+        background_tasks.add_task(
+            svc.run_and_finalize,
+            doc["_id"],
+            body.get("client_input", ""),
+            org_id,
+            user.id,
+            body.get("domain"),
+            body.get("project_type"),
+        )
     return doc
 
 
