@@ -92,6 +92,8 @@ class LLMClient:
             content = self._call_groq(config.model, truncated, actual_max, temperature)
         elif config.provider == "openai":
             content = self._call_openai(config.model, truncated, actual_max, temperature)
+        elif config.provider == "nvidia":
+            content = self._call_nvidia(config.model, truncated, actual_max, temperature)
         elif config.provider == "ollama":
             content = self._call_ollama(config.model, truncated, actual_max, temperature)
         else:
@@ -140,6 +142,63 @@ class LLMClient:
             max_tokens=max_tokens,
         )
         return response.choices[0].message.content
+
+    def _call_nvidia(self, model: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        from openai import OpenAI
+        # Free-tier NIM requests can sit in a shared queue for minutes; the SDK
+        # default 600s timeout killed writer calls mid-flight. 1800s keeps a
+        # queued request alive until it actually completes.
+        client = OpenAI(
+            api_key=settings.NVIDIA_API_KEY,
+            base_url=settings.NVIDIA_BASE_URL,
+            timeout=1800,
+        )
+        last_error = None
+        for attempt in range(1, 4):
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                content = response.choices[0].message.content
+                if content is None:
+                    # Reasoning-class NIM models can exhaust small token budgets on
+                    # chain-of-thought and return no final content. Treat that as a
+                    # provider failure so the chain falls through cleanly instead of
+                    # silently returning an unusable response.
+                    raise RuntimeError(
+                        f"NVIDIA returned no content (finish={response.choices[0].finish_reason})"
+                    )
+                return content
+            except Exception as e:
+                last_error = e
+                if not self._is_transient_nvidia(e):
+                    raise
+                wait = 30 * attempt
+                logger.warning(
+                    "NVIDIA transient failure (attempt %d/3): %s — retrying in %ds",
+                    attempt, e, wait,
+                )
+                time.sleep(wait)
+        raise last_error
+
+    @staticmethod
+    def _is_transient_nvidia(e: Exception) -> bool:
+        # "Worker local total request limit reached (33/32)" is a free-tier
+        # concurrency cap that clears within seconds; the SDK's quick retries
+        # don't wait long enough, so treat it (and 429/503/504) as retryable.
+        if getattr(e, "status_code", None) in (429, 503, 504):
+            return True
+        msg = str(e)
+        low = msg.lower()
+        return (
+            "resourceexhausted" in low
+            or "rate limit" in low
+            or "too many requests" in low
+            or "overloaded" in low
+        )
 
     def _call_ollama(self, model: str, prompt: str, max_tokens: int, temperature: float) -> str:
         import httpx

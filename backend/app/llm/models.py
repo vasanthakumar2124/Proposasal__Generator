@@ -22,13 +22,21 @@ MODEL_REGISTRY: dict[str, dict[str, ModelConfig]] = {
         "fast": ModelConfig("openai", "gpt-4o-mini", 0.00000015, 0.00000060),
         "default": ModelConfig("openai", "gpt-4o", 0.00000250, 0.00001000),
     },
+    "nvidia": {
+        # meta/llama-3.1-8b-instruct measured ~10s/call (vs 78-188s for
+        # nemotron-super-49b) on this free-tier account; fast fallback when
+        # Groq's 100k TPD window is exhausted. Quality is lower, so the rubric
+        # retry loop may re-run the writer — still ~2-4x faster end to end.
+        "fast": ModelConfig("nvidia", "meta/llama-3.1-8b-instruct", 0.0, 0.0),
+        "default": ModelConfig("nvidia", "meta/llama-3.1-8b-instruct", 0.0, 0.0),
+    },
     "ollama": {
         "default": ModelConfig("ollama", "llama3.1:8b", 0.0, 0.0),
     },
 }
 
 TASK_MODEL_MAP: dict[TaskComplexity, list[tuple[str, str]]] = {
-    "simple": [("openai", "fast"), ("groq", "fast"), ("ollama", "default"), ("groq", "default")],
-    "medium": [("openai", "fast"), ("groq", "default"), ("groq", "fast"), ("ollama", "default")],
-    "complex": [("openai", "default"), ("groq", "default"), ("openai", "fast"), ("groq", "fast")],
+    "simple": [("openai", "fast"), ("groq", "fast"), ("nvidia", "fast"), ("ollama", "default"), ("groq", "default")],
+    "medium": [("openai", "fast"), ("groq", "default"), ("nvidia", "default"), ("groq", "fast"), ("ollama", "default")],
+    "complex": [("openai", "default"), ("groq", "default"), ("nvidia", "default"), ("openai", "fast"), ("groq", "fast")],
 }

@@ -107,7 +107,12 @@ class GeneratedProposalService:
             "created_by": user_id,
             "version": 1,
             "ai_generated": True,
-            "generation_metadata": {"rubric_check": rubric_check},
+            "generation_metadata": {
+                "rubric_check": rubric_check,
+                "rubric_retries": (
+                    final_state.get("rubric_retries") if isinstance(final_state, dict) else None
+                ),
+            },
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }

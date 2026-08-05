@@ -257,17 +257,23 @@ def check_proposal(document: dict, engine_context: dict | None = None) -> Rubric
 def _section_to_text(sec_data: Any) -> str:
     if isinstance(sec_data, str):
         return sec_data
-    if isinstance(sec_data, dict):
-        parts = []
-        for v in sec_data.values():
-            if isinstance(v, str):
-                parts.append(v)
-            elif isinstance(v, list):
-                parts.extend(str(item) for item in v)
-        return " ".join(parts)
-    if isinstance(sec_data, list):
-        return " ".join(str(item) for item in sec_data)
-    return str(sec_data)
+    parts: list[str] = []
+    _flatten_text(sec_data, parts)
+    return " ".join(parts)
+
+
+def _flatten_text(value: Any, parts: list[str]) -> None:
+    """Collect only string leaves. Python/JSON list reprs (e.g. "['Feature
+    modules', 'Integrated frontend']") must never reach placeholder pattern
+    matching, or short engine arrays get misflagged as placeholder brackets."""
+    if isinstance(value, str):
+        parts.append(value)
+    elif isinstance(value, dict):
+        for v in value.values():
+            _flatten_text(v, parts)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _flatten_text(item, parts)
 
 
 def _check_number(section: dict, section_key: str, engine: dict, engine_key: str, mismatches: list) -> None:

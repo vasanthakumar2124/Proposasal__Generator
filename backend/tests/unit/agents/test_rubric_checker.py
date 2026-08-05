@@ -3,8 +3,36 @@ from app.agents.rubric_checker import (
     check_word_count,
     check_section_density,
     check_generic_phrases,
+    no_placeholder_leak,
     NARRATIVE_MIN_WORDS,
 )
+
+
+class TestPlaceholderDetection:
+    def test_engine_list_repr_not_flagged(self):
+        doc = {
+            "sections": {
+                "timeline": {
+                    "phases": [
+                        {
+                            "phase": 4,
+                            "name": "Sprint 2 - Feature Development",
+                            "activities": ["Feature modules", "Frontend pages"],
+                            "deliverables": ["Feature modules", "Integrated frontend"],
+                        }
+                    ]
+                }
+            }
+        }
+        assert no_placeholder_leak(doc) == []
+
+    def test_placeholder_bracket_text_still_flagged(self):
+        doc = {"sections": {"security": {"authentication": "signed within [Month 1] timeframe"}}}
+        assert "security" in no_placeholder_leak(doc)
+
+    def test_placeholder_string_still_flagged(self):
+        doc = {"sections": {"terms": {"confidentiality": "TBD"}}}
+        assert "terms" in no_placeholder_leak(doc)
 
 
 class TestWordCountThresholds:

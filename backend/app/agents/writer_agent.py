@@ -16,28 +16,30 @@ MAX_PROMPT_TOKENS = 3500
 
 # Keys of business_context the writer actually needs for grounding. Everything
 # else (diagram SVGs, template config, raw engine internals) is dropped to keep
-# each batch's prompt small and focused.
-WRITER_CONTEXT_ALLOWLIST = {
-    "industry_data",
+# each batch's prompt small and focused. Ordered by importance: when the prompt
+# budget forces truncation, truncate_to_max_tokens cuts from the END of the
+# serialized JSON, so the grounding-critical numbers must come first.
+WRITER_CONTEXT_ALLOWLIST = [
     "module_data",
     "feature_data",
-    "automation_data",
-    "integration_data",
-    "tech_stack_data",
-    "timeline_data",
     "pricing_data",
+    "timeline_data",
+    "tech_stack_data",
     "team_data",
     "roi_data",
+    "industry_data",
+    "automation_data",
+    "integration_data",
     "risk_data",
     "commercial_data",
     "support_data",
     "sla_data",
     "proposal_summary",
-}
+]
 
 
 def _filter_business_context(business_context: dict) -> dict:
-    return {k: v for k, v in business_context.items() if k in WRITER_CONTEXT_ALLOWLIST}
+    return {k: business_context[k] for k in WRITER_CONTEXT_ALLOWLIST if k in business_context}
 
 
 def _format_rubric_issues(rubric_issues: list) -> str:
@@ -142,4 +144,22 @@ class WriterAgent(BaseAgent):
         # complexity=medium: chain is gpt-4o-mini -> llama-3.3-70b -> llama-3.1-8b,
         # so the proposal-writing call lands on a mid-tier+ model, not the 8B
         # instant model that "simple" would pick first.
-        return self._llm_json(prompt, complexity="medium", max_tokens=4096)
+        result = self._llm_json(prompt, complexity="medium", max_tokens=8192)
+        if "_parse_error" in result:
+            # Batch outputs that hit the token cap or that the model emitted as
+            # freeform text (observed on the single-section conclusion batch)
+            # would otherwise silently drop whole sections from the draft. One
+            # strict re-call self-heals most of those cases.
+            logger.warning(
+                "Writer batch %s parse failure (%s), retrying once with strict JSON instruction",
+                batch_keys,
+                result["_parse_error"],
+            )
+            strict_prompt = (
+                prompt
+                + "\n\nCRITICAL: The previous output was not valid JSON. Output ONLY a single "
+                + "valid JSON object with exactly the batch section names as top-level keys and "
+                + "exactly the listed fields. No markdown fences, no commentary, no trailing text."
+            )
+            result = self._llm_json(strict_prompt, complexity="medium", max_tokens=8192)
+        return result

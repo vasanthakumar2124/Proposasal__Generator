@@ -101,3 +101,23 @@ class TestWriterAgentBatching:
         assert "executive_summary" not in draft
         assert "proposed_solution" in draft
         assert "conclusion" in draft
+
+    def test_parse_failure_retried_once_with_strict_instruction(self):
+        class FlakyLLM(FakeLLM):
+            def __init__(self):
+                super().__init__()
+                self.fail_once = True
+
+            def generate_json(self, prompt, complexity="simple", max_tokens=2048):
+                self.calls.append(prompt)
+                if self.fail_once and '"executive_summary": {' in prompt:
+                    self.fail_once = False
+                    return {"raw_response": "not json", "_parse_error": "boom"}
+                return super().generate_json(prompt)
+
+        llm = FlakyLLM()
+        agent = WriterAgent(llm)
+        result = agent.run(self._state())
+        draft = result["proposal_draft"]
+        assert "executive_summary" in draft
+        assert any("CRITICAL: The previous output was not valid JSON" in p for p in llm.calls)
