@@ -36,7 +36,7 @@ MODEL_REGISTRY: dict[str, dict[str, ModelConfig]] = {
 }
 
 TASK_MODEL_MAP: dict[TaskComplexity, list[tuple[str, str]]] = {
-    "simple": [("openai", "fast"), ("groq", "fast"), ("nvidia", "fast"), ("ollama", "default"), ("groq", "default")],
-    "medium": [("openai", "fast"), ("groq", "default"), ("nvidia", "default"), ("groq", "fast"), ("ollama", "default")],
-    "complex": [("openai", "default"), ("groq", "default"), ("nvidia", "default"), ("openai", "fast"), ("groq", "fast")],
+    "simple": [("groq", "fast"), ("openai", "fast"), ("nvidia", "fast"), ("ollama", "default"), ("groq", "default")],
+    "medium": [("groq", "default"), ("groq", "fast"), ("openai", "fast"), ("nvidia", "default"), ("ollama", "default")],
+    "complex": [("groq", "default"), ("groq", "fast"), ("openai", "default"), ("nvidia", "default"), ("ollama", "default")],
 }

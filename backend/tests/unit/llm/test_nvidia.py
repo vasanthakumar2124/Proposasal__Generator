@@ -8,10 +8,10 @@ class TestNvidiaIntegration:
         assert cfg["fast"].model == "meta/llama-3.1-8b-instruct"
         assert cfg["default"].provider == "nvidia"
 
-    def test_medium_chain_has_nvidia_after_groq_default(self):
+    def test_medium_chain_has_nvidia_after_both_groq_tiers(self):
         chain = TASK_MODEL_MAP["medium"]
         assert ("nvidia", "default") in chain
-        assert chain.index(("groq", "default")) < chain.index(("nvidia", "default")) < chain.index(("groq", "fast"))
+        assert chain.index(("groq", "default")) < chain.index(("groq", "fast")) < chain.index(("nvidia", "default"))
 
     def test_simple_chain_has_nvidia_fast(self):
         assert ("nvidia", "fast") in TASK_MODEL_MAP["simple"]

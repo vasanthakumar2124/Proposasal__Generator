@@ -5,7 +5,7 @@ export interface Proposal {
   client_id: string | null
   workspace_id: string | null
   version: number
-  status: 'draft' | 'generating' | 'review' | 'approved' | 'rejected' | 'sent' | 'error'
+  status: 'draft' | 'processing' | 'generating' | 'review' | 'approved' | 'rejected' | 'sent' | 'error'
   title: string
   sections: Record<string, unknown>
   ai_generated: boolean

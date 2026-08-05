@@ -10,8 +10,48 @@ logger = logging.getLogger("proposalcraft.generated_proposal_service")
 
 
 class GeneratedProposalService:
-    async def generate(
+    async def start_generation(
         self,
+        client_input: str,
+        org_id: str,
+        user_id: str,
+        domain: str | None = None,
+        project_type: str | None = None,
+    ) -> dict:
+        """Insert a status=processing placeholder and return immediately so the
+        caller (API) can hand the workflow off to a background task. The doc is
+        finalized in-place by run_and_finalize()."""
+        date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+        new_id = ObjectId()
+        doc = {
+            "_id": new_id,
+            "title": "Generating proposal...",
+            "client_input": client_input,
+            "sections": {},
+            "requirements": {},
+            "business_context": None,
+            "review": None,
+            "status": "processing",
+            "error": None,
+            "organization_id": org_id,
+            "company_name": "",
+            "company_logo": "",
+            "proposal_id": f"PROP-{date_str}-{str(new_id)[-4:].upper()}",
+            "created_by": user_id,
+            "version": 1,
+            "ai_generated": True,
+            "generation_metadata": {"rubric_check": None, "rubric_retries": None},
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        await generated_proposal_collection.insert_one(doc)
+        doc["_id"] = str(doc["_id"])
+        logger.info("Generation started: %s (%s)", doc["proposal_id"], doc["_id"])
+        return doc
+
+    async def run_and_finalize(
+        self,
+        doc_id: str,
         client_input: str,
         org_id: str,
         user_id: str,
@@ -88,10 +128,7 @@ class GeneratedProposalService:
         except Exception as e:
             logger.warning("Could not resolve organization name: %s", e)
 
-        date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-        new_id = ObjectId()
         doc = {
-            "_id": new_id,
             "title": title,
             "client_input": client_input,
             "sections": proposal_content if isinstance(proposal_content, dict) else {"content": str(proposal_content)},
@@ -103,7 +140,6 @@ class GeneratedProposalService:
             "organization_id": org_id,
             "company_name": company_name,
             "company_logo": company_logo,
-            "proposal_id": f"PROP-{date_str}-{str(new_id)[-4:].upper()}",
             "created_by": user_id,
             "version": 1,
             "ai_generated": True,
@@ -113,14 +149,15 @@ class GeneratedProposalService:
                     final_state.get("rubric_retries") if isinstance(final_state, dict) else None
                 ),
             },
-            "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }
 
-        result = await generated_proposal_collection.insert_one(doc)
-        doc["_id"] = str(result.inserted_id)
-        logger.info("Generated proposal '%s' (%s) as %s", title, doc["_id"], doc["proposal_id"])
-        return doc
+        await generated_proposal_collection.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": doc},
+        )
+        logger.info("Generated proposal '%s' (%s) finalized", title, doc_id)
+        return {**doc, "_id": doc_id}
 
     async def list_proposals(self, org_id: str) -> list[dict]:
         cursor = generated_proposal_collection.find(

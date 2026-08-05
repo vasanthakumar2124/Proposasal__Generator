@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from typing import Optional
 
@@ -154,22 +154,27 @@ async def export_proposal(
 async def generate_proposal(
     body: dict,
     user: User = Depends(require_permission("proposal:create")),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     org_id: str = Depends(get_current_org),
 ):
     svc = GeneratedProposalService()
-    result = await svc.generate(
+    doc = await svc.start_generation(
         client_input=body.get("client_input", ""),
         domain=body.get("domain"),
         project_type=body.get("project_type"),
         org_id=org_id,
         user_id=user.id,
     )
-    if result.get("status") == "error":
-        raise HTTPException(
-            status_code=502,
-            detail=f"Proposal generation failed: {result.get('error', 'unknown error')}",
-        )
-    return result
+    background_tasks.add_task(
+        svc.run_and_finalize,
+        doc["_id"],
+        body.get("client_input", ""),
+        org_id,
+        user.id,
+        body.get("domain"),
+        body.get("project_type"),
+    )
+    return doc
 
 
 @router.put("/{proposal_id}/sections/{section_name}", response_model=ProposalResponse)

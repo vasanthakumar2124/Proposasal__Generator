@@ -16,6 +16,7 @@ class UserRole(str, Enum):
 
 class ProposalStatus(str, Enum):
     DRAFT = "draft"
+    PROCESSING = "processing"
     GENERATING = "generating"
     REVIEW = "review"
     APPROVED = "approved"

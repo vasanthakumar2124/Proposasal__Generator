@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGenerateProposal } from '../hooks/useProposals'
+import { proposalsApi } from '../api/proposals'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -34,21 +35,44 @@ export default function GenerateProposal() {
   const [clientInput, setClientInput] = useState('')
   const [domain, setDomain] = useState('')
   const [projectType, setProjectType] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!clientInput.trim()) return
+    if (!clientInput.trim() || isGenerating) return
 
     try {
+      setIsGenerating(true)
       const result = await generate.mutateAsync({
         client_input: clientInput,
         domain: domain || undefined,
         project_type: projectType || undefined,
       })
-      navigate(`/proposals/${result.data._id}`)
+      const id = result.data._id
+
+      // Generation runs in a background task; poll until it finishes
+      // (bounded so a dead backend never spins forever).
+      const deadline = Date.now() + 15 * 60 * 1000
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 3000))
+        const p = await proposalsApi.get(id)
+        const status = p.data.status
+        if (status === 'processing') continue
+        if (status === 'error') {
+          const errMsg =
+            (p.data as { generation_metadata?: { error?: string } }).generation_metadata?.error ||
+            'Generation failed'
+          throw new Error(errMsg)
+        }
+        navigate(`/proposals/${id}`)
+        return
+      }
+      throw new Error('Generation timed out after 15 minutes')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || (err as Error)?.message || 'Generation failed'
       alert(msg)
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -112,12 +136,12 @@ export default function GenerateProposal() {
 
             <Button
               type="submit"
-              disabled={!clientInput.trim() || generate.isPending}
+              disabled={!clientInput.trim() || isGenerating}
               className="w-full"
               size="lg"
             >
-              {generate.isPending ? (
-                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Proposal...</>
+              {isGenerating ? (
+                <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generating Proposal... This can take a few minutes.</>
               ) : (
                 <><Sparkles className="h-5 w-5 mr-2" /> Generate Proposal</>
               )}
