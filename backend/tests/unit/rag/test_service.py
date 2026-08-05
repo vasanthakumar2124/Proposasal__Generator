@@ -1,6 +1,8 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
+from app.config.settings import settings
+
 
 class TestQdrantServiceMocked:
     def test_collections_defined(self):
@@ -8,7 +10,9 @@ class TestQdrantServiceMocked:
         assert len(QDRANT_COLLECTIONS) == 8
         assert "industry_knowledge" in QDRANT_COLLECTIONS
 
-    def test_insert_and_search_mocked(self):
+    def test_insert_and_search_mocked(self, monkeypatch):
+        monkeypatch.setattr(settings, "QDRANT_URL", "")
+        monkeypatch.setattr(settings, "QDRANT_API_KEY", "")
         with patch("app.rag.service.embedding_service") as mock_embed:
             mock_embed.dimensions = 4
             mock_embed.embed_query.return_value = [0.1, 0.2, 0.3, 0.4]

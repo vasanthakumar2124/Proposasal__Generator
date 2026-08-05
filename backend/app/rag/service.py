@@ -35,6 +35,7 @@ class QdrantService:
                 api_key=settings.QDRANT_API_KEY or None,
                 location=":memory:" if not settings.QDRANT_URL else None,
                 prefer_grpc=False,
+                check_compatibility=False,
             )
         return self._client
 
@@ -117,7 +118,7 @@ class QdrantService:
     def count_documents(self, collection_name: str) -> int:
         client = self._get_client()
         info = client.get_collection(collection_name)
-        return info.vectors_count
+        return info.vectors_count or 0
 
 
 qdrant_service = QdrantService()
