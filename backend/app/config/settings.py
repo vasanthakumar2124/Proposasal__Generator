@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     ENABLE_ACTIVITY_EVENTS: bool = True
+    ENABLE_USAGE_METERING: bool = True
 
     MAX_UPLOAD_SIZE_MB: int = 10
     STORAGE_BACKEND: str = "local"

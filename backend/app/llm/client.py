@@ -9,6 +9,7 @@ from app.config.settings import settings
 from app.llm.cache import llm_cache
 from app.llm.models import TASK_MODEL_MAP, MODEL_REGISTRY, TaskComplexity, ModelConfig
 from app.llm.tokenizer import estimate_tokens, truncate_to_max_tokens
+from app.infrastructure.usage.meter import record_llm_call_sync
 
 logger = logging.getLogger("proposalcraft.llm")
 
@@ -105,6 +106,8 @@ class LLMClient:
 
         model_key = f"{config.provider}:{config.model}"
         self.cache.set(prompt, model_key, content)
+
+        record_llm_call_sync(config.provider, config.model, input_tokens, output_tokens, cost)
 
         logger.info(
             "LLM call: provider=%s model=%s input_tokens=%d output_tokens=%d cost=%.6f latency=%dms",

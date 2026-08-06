@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -6,6 +7,8 @@ from bson import ObjectId
 
 from app.domain.events import DomainEvent, EVENT_PROPOSAL_GENERATED, EVENT_PROPOSAL_FAILED
 from app.infrastructure.events.bus import event_bus
+from app.infrastructure.usage.context import set_usage_context
+from app.infrastructure.usage.meter import set_usage_loop, usage_meter
 from app.models.generated_proposal_model import generated_proposal_collection
 
 logger = logging.getLogger("proposalcraft.generated_proposal_service")
@@ -48,6 +51,7 @@ class GeneratedProposalService:
         }
         await generated_proposal_collection.insert_one(doc)
         doc["_id"] = str(doc["_id"])
+        await usage_meter.record_proposal_generation(org_id, user_id, str(doc["_id"]))
         logger.info("Generation started: %s (%s)", doc["proposal_id"], doc["_id"])
         return doc
 
@@ -61,6 +65,9 @@ class GeneratedProposalService:
         project_type: str | None = None,
     ) -> dict:
         from app.graph.workflow import proposal_workflow
+
+        set_usage_context(org_id, user_id)
+        set_usage_loop(asyncio.get_running_loop())
 
         initial_state = {
             "raw_client_input": client_input,
@@ -169,6 +176,7 @@ class GeneratedProposalService:
                 payload={"title": title, "error": error},
             )
         )
+        await asyncio.sleep(0.05)
         return {**doc, "_id": doc_id}
 
     async def list_proposals(self, org_id: str) -> list[dict]:

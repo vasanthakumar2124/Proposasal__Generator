@@ -62,3 +62,4 @@ async def ensure_indexes() -> None:
 
     await database.usage.create_index("organization_id")
     await database.usage.create_index([("organization_id", 1), ("created_at", -1)])
+    await database.usage.create_index([("organization_id", 1), ("period", 1)], unique=True)
