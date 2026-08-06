@@ -17,5 +17,6 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     broker_connection_retry_on_startup=True,
+    worker_cancel_long_running_tasks_on_connection_loss=False,
     task_default_queue="proposalcraft",
 )
