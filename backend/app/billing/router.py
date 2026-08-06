@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.billing.schemas import PLANS, CheckoutRequest, CheckoutResponse, BillingPortalRequest
 from app.billing.service import stripe_service
-from app.config.constants import OrganizationPlan, PLAN_LIMITS
+from app.billing.limits import get_org_plan_state
 from app.domain.entities.user import User
 from app.api.deps import get_current_user, get_current_org
 from app.infrastructure.usage.meter import usage_meter, METERED_FIELDS
@@ -76,17 +76,14 @@ async def get_usage(
     user: User = Depends(get_current_user),
     org_id: str = Depends(get_current_org),
 ):
-    sub = await stripe_service.get_subscription(org_id)
-    plan_id = sub.plan_id if sub else "free"
-    limits = PLAN_LIMITS.get(OrganizationPlan(plan_id), PLAN_LIMITS[OrganizationPlan.FREE])
+    state = await get_org_plan_state(org_id)
     usage = await usage_meter.get_org_usage(org_id)
-    used = usage.get("proposals_generated", 0)
     return {
-        "plan_id": plan_id,
+        "plan_id": state["plan_id"],
         "period": usage.get("period"),
         "usage": {k: usage.get(k, 0) for k in METERED_FIELDS},
-        "limits": limits,
-        "proposals_remaining": max(0, limits["proposals_per_month"] - used),
+        "limits": state["limits"],
+        "proposals_remaining": state["proposals_remaining"],
     }
 
 

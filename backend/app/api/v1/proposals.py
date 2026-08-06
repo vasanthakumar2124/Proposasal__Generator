@@ -16,6 +16,7 @@ from app.export.service import export_service
 from app.export.normalize import normalize_proposal
 from app.api.deps import get_current_user, get_current_org, require_permission
 from app.workers.tasks import generate_proposal_task
+from app.billing.limits import enforce_proposal_limit
 
 router = APIRouter()
 
@@ -158,6 +159,7 @@ async def generate_proposal(
     background_tasks: BackgroundTasks = BackgroundTasks(),
     org_id: str = Depends(get_current_org),
 ):
+    await enforce_proposal_limit(org_id)
     svc = GeneratedProposalService()
     doc = await svc.start_generation(
         client_input=body.get("client_input", ""),
