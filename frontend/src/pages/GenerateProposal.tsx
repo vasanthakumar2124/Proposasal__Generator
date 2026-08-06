@@ -49,25 +49,63 @@ export default function GenerateProposal() {
         project_type: projectType || undefined,
       })
       const id = result.data._id
-
-      // Generation runs in a background task; poll until it finishes
-      // (bounded so a dead backend never spins forever).
       const deadline = Date.now() + 15 * 60 * 1000
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 3000))
-        const p = await proposalsApi.get(id)
-        const status = p.data.status
-        if (status === 'processing') continue
-        if (status === 'error') {
-          const errMsg =
-            (p.data as { generation_metadata?: { error?: string } }).generation_metadata?.error ||
-            'Generation failed'
-          throw new Error(errMsg)
+
+      const waitViaSSE = () =>
+        new Promise<{ status: string; error?: string } | null>((resolve) => {
+          const token = localStorage.getItem('access_token')
+          const base = import.meta.env.VITE_API_URL || '/api/v1'
+          const es = new EventSource(
+            `${base}/realtime/proposals/${id}/events?token=${encodeURIComponent(token || '')}`
+          )
+          const timer = setTimeout(() => {
+            es.close()
+            resolve(null)
+          }, Math.max(0, deadline - Date.now()))
+
+          const done = (status: string, error?: string) => {
+            clearTimeout(timer)
+            es.close()
+            resolve({ status, error })
+          }
+
+          es.addEventListener('connected', (ev) => {
+            try {
+              const data = JSON.parse((ev as MessageEvent).data)
+              if (data.status !== 'processing') done(data.status, data.error)
+            } catch { /* ignore */ }
+          })
+          es.addEventListener('status', (ev) => {
+            try {
+              const data = JSON.parse((ev as MessageEvent).data)
+              if (data.status !== 'processing') done(data.status, data.error)
+            } catch { /* ignore */ }
+          })
+          es.onerror = () => {
+            clearTimeout(timer)
+            es.close()
+            resolve(null)
+          }
+        })
+
+      let outcome = await waitViaSSE()
+      if (!outcome) {
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 3000))
+          const p = await proposalsApi.get(id)
+          const status = p.data.status
+          if (status === 'processing') continue
+          outcome = { status, error: (p.data as { generation_metadata?: { error?: string } }).generation_metadata?.error }
+          break
         }
-        navigate(`/proposals/${id}`)
-        return
       }
-      throw new Error('Generation timed out after 15 minutes')
+      if (!outcome || outcome.status === 'processing') {
+        throw new Error('Generation timed out after 15 minutes')
+      }
+      if (outcome.status === 'error') {
+        throw new Error(outcome.error || 'Generation failed')
+      }
+      navigate(`/proposals/${id}`)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || (err as Error)?.message || 'Generation failed'
       alert(msg)
