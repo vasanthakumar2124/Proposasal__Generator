@@ -12,6 +12,7 @@ import {
   ScrollText,
   CreditCard,
   BarChart3,
+  Activity as ActivityIcon,
 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/generate', icon: Sparkles, label: 'Generate' },
   { to: '/history', icon: ScrollText, label: 'Proposals' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/activity', icon: ActivityIcon, label: 'Activity' },
   { to: '/billing', icon: CreditCard, label: 'Billing' },
 ]
 

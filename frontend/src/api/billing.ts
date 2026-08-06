@@ -11,4 +11,6 @@ export const billingApi = {
   cancelSubscription: () => apiClient.post('/billing/cancel'),
 
   getPortalUrl: () => apiClient.post('/billing/portal', { return_url: window.location.origin + '/billing' }),
+
+  getUsage: () => apiClient.get('/billing/usage'),
 }

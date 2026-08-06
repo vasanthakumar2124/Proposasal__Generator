@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
-import { Check, Loader2, CreditCard, ArrowRight } from 'lucide-react'
+import { Check, Loader2, CreditCard, ArrowRight, Gauge, Zap, Coins, FileText } from 'lucide-react'
 
 const PLAN_FEATURES: Record<string, string[]> = {
   free: ['3 proposals/month', 'HTML exports', 'Basic templates', 'Community support'],
@@ -96,6 +96,11 @@ export default function BillingPage() {
     queryFn: () => billingApi.getSubscription(),
   })
 
+  const { data: usageData } = useQuery({
+    queryKey: ['usage'],
+    queryFn: () => billingApi.getUsage(),
+  })
+
   const checkout = useMutation({
     mutationFn: (planId: string) => billingApi.createCheckout(planId, interval),
     onSuccess: (data) => {
@@ -106,6 +111,13 @@ export default function BillingPage() {
 
   const plans = plansData?.data?.plans || plansData?.data?.data?.plans || []
   const subscription = subData?.data?.plan_id || subData?.data?.data?.plan_id || 'free'
+
+  const usage = usageData?.data?.usage || {}
+  const usageLimits = usageData?.data?.limits || {}
+  const proposalsRemaining = usageData?.data?.proposals_remaining ?? null
+  const proposalLimit = usageLimits?.proposals_per_month ?? 0
+  const proposalsUsed = usage?.proposals_generated ?? 0
+  const usagePct = proposalLimit > 0 ? Math.min(100, Math.round((proposalsUsed / proposalLimit) * 100)) : 0
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -121,6 +133,58 @@ export default function BillingPage() {
           <CreditCard className="h-4 w-4 mr-2" /> Billing Portal
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-blue-600" /> Usage ({usageData?.data?.period || ''})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="flex justify-between text-sm mb-1.5">
+              <span className="font-medium">Proposals generated</span>
+              <span className="text-gray-500">{proposalsUsed} of {proposalLimit}</span>
+            </div>
+            <div className="h-2.5 w-full rounded-full bg-gray-100">
+              <div
+                className={`h-2.5 rounded-full ${usagePct >= 100 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-blue-600'}`}
+                style={{ width: `${usagePct}%` }}
+              />
+            </div>
+            {proposalsRemaining !== null && (
+              <p className="text-xs text-gray-500 mt-1.5">
+                {proposalsRemaining > 0
+                  ? `${proposalsRemaining} proposal${proposalsRemaining === 1 ? '' : 's'} remaining this month`
+                  : 'You have reached your plan limit this month'}
+              </p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Zap className="h-5 w-5 text-amber-500 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-500">LLM calls</p>
+                <p className="text-lg font-semibold">{usage?.llm_calls ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <FileText className="h-5 w-5 text-blue-500 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-500">Tokens used</p>
+                <p className="text-lg font-semibold">{((usage?.input_tokens ?? 0) + (usage?.output_tokens ?? 0)).toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Coins className="h-5 w-5 text-green-500 shrink-0" />
+              <div>
+                <p className="text-xs text-gray-500">AI cost</p>
+                <p className="text-lg font-semibold">${(usage?.cost ?? 0).toFixed(4)}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex gap-2 justify-center">
         <Button
