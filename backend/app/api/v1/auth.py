@@ -73,10 +73,13 @@ async def login(body: LoginRequest):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshTokenRequest):
+async def refresh(body: RefreshTokenRequest, request: Request):
     auth_service = AuthService()
     try:
-        access_token, refresh_token = await auth_service.refresh_token(body.refresh_token)
+        access_token, refresh_token = await auth_service.refresh_token(
+            body.refresh_token,
+            meta=_request_meta(request),
+        )
     except (InvalidCredentialsError) as e:
         raise HTTPException(status_code=401, detail=str(e))
 
@@ -124,5 +127,15 @@ async def update_me(body: UserUpdateRequest, user: User = Depends(get_current_us
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(user: User = Depends(get_current_user)):
+async def logout(body: RefreshTokenRequest | None = None, user: User = Depends(get_current_user)):
+    auth_service = AuthService()
+    if body and body.refresh_token:
+        await auth_service.logout(body.refresh_token)
     return MessageResponse(message="Logged out successfully")
+
+
+def _request_meta(request: Request) -> dict:
+    return {
+        "user_agent": request.headers.get("user-agent", ""),
+        "ip": request.client.host if request.client else "",
+    }

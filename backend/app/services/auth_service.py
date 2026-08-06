@@ -1,7 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config.constants import UserRole, DEFAULT_PERMISSIONS
+from app.config.settings import settings
 from app.domain.entities.user import User
 from app.domain.entities.organization import Organization
 from app.domain.exceptions import (
@@ -17,6 +18,7 @@ from app.infrastructure.auth.jwt import (
     verify_access_token,
     verify_refresh_token,
 )
+from app.infrastructure.auth.refresh_store import refresh_token_store
 from app.infrastructure.auth.password import hash_password, verify_password
 from app.infrastructure.log.audit import create_audit_log
 from app.infrastructure.database.mongo_repositories.user_repo import MongoUserRepository
@@ -33,6 +35,12 @@ class AuthService:
     ) -> None:
         self.user_repo = user_repo or MongoUserRepository()
         self.org_repo = org_repo or MongoOrganizationRepository()
+
+    async def _issue_refresh(self, user: User, org: Organization, meta: Optional[dict] = None) -> str:
+        token = create_refresh_token(user.id)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+        await refresh_token_store.store(user.id, org.id, token, expires_at, meta=meta)
+        return token
 
     async def register(
         self, name: str, email: str, password: str, company_name: str
@@ -57,7 +65,7 @@ class AuthService:
         user = await self.user_repo.create(user)
 
         access_token = create_access_token(user.id, {"org_id": org.id, "role": user.role.value})
-        refresh_token = create_refresh_token(user.id)
+        refresh_token = await self._issue_refresh(user, org)
 
         await create_audit_log(
             organization_id=org.id,
@@ -98,7 +106,7 @@ class AuthService:
         await self.user_repo.update(user)
 
         access_token = create_access_token(user.id, {"org_id": org.id, "role": user.role.value, "permissions": user.permissions})
-        refresh_token = create_refresh_token(user.id)
+        refresh_token = await self._issue_refresh(user, org)
 
         await create_audit_log(
             organization_id=org.id,
@@ -110,7 +118,7 @@ class AuthService:
 
         return user, org, access_token, refresh_token
 
-    async def refresh_token(self, refresh_token: str) -> tuple[str, str]:
+    async def refresh_token(self, refresh_token: str, meta: Optional[dict] = None) -> tuple[str, str]:
         try:
             payload = verify_refresh_token(refresh_token)
         except (TokenExpiredError, TokenInvalidError) as e:
@@ -125,10 +133,34 @@ class AuthService:
         if not org or org.status != "active":
             raise InvalidCredentialsError("Organization inactive")
 
+        record = await refresh_token_store.find(refresh_token)
+        if record is None or record.get("revoked"):
+            revoked = await refresh_token_store.revoke_all_for_user(user_id)
+            await create_audit_log(
+                organization_id=org.id,
+                user_id=user.id,
+                action="auth.refresh_reuse",
+                resource_type="user",
+                resource_id=user.id,
+                details={"revoked_sessions": revoked},
+            )
+            raise InvalidCredentialsError("Refresh token invalid or reused; all sessions were revoked")
+
+        await refresh_token_store.revoke(refresh_token)
+
         new_access = create_access_token(user.id, {"org_id": org.id, "role": user.role.value, "permissions": user.permissions})
-        new_refresh = create_refresh_token(user.id)
+        new_refresh = await self._issue_refresh(user, org, meta=meta)
 
         return new_access, new_refresh
+
+    async def logout(self, refresh_token: Optional[str] = None) -> None:
+        if not refresh_token:
+            return
+        try:
+            verify_refresh_token(refresh_token)
+        except (TokenExpiredError, TokenInvalidError):
+            return
+        await refresh_token_store.revoke(refresh_token)
 
     async def get_current_user(self, user_id: str) -> Optional[User]:
         return await self.user_repo.get_by_id(user_id)

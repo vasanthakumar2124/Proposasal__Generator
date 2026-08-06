@@ -64,3 +64,7 @@ async def ensure_indexes() -> None:
     await database.usage.create_index("organization_id")
     await database.usage.create_index([("organization_id", 1), ("created_at", -1)])
     await database.usage.create_index([("organization_id", 1), ("period", 1)], unique=True)
+
+    await database.refresh_tokens.create_index("token_hash", unique=True)
+    await database.refresh_tokens.create_index("user_id")
+    await database.refresh_tokens.create_index("expires_at", expireAfterSeconds=0)
