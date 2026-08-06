@@ -21,6 +21,8 @@ from app.infrastructure.auth.password import hash_password, verify_password
 from app.infrastructure.log.audit import create_audit_log
 from app.infrastructure.database.mongo_repositories.user_repo import MongoUserRepository
 from app.infrastructure.database.mongo_repositories.org_repo import MongoOrganizationRepository
+from app.infrastructure.events.bus import event_bus
+from app.domain.events import DomainEvent, EVENT_USER_REGISTERED
 
 
 class AuthService:
@@ -63,6 +65,16 @@ class AuthService:
             action="auth.register",
             resource_type="user",
             resource_id=user.id,
+        )
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_USER_REGISTERED,
+                organization_id=org.id,
+                user_id=user.id,
+                resource_type="user",
+                resource_id=user.id,
+                payload={"email": email, "name": name},
+            )
         )
 
         return user, org, access_token, refresh_token

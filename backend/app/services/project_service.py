@@ -1,10 +1,12 @@
 from typing import Optional
 
 from app.domain.entities.project import Project
+from app.domain.events import DomainEvent, EVENT_PROJECT_CREATED
 from app.domain.exceptions import EntityNotFoundError
 from app.domain.interfaces import ProjectRepository
 from app.infrastructure.database.mongo_repositories.project_repo import MongoProjectRepository
 from app.infrastructure.log.audit import create_audit_log
+from app.infrastructure.events.bus import event_bus
 
 
 class ProjectService:
@@ -15,6 +17,16 @@ class ProjectService:
         project = Project(organization_id=org_id, created_by=user_id, **data)
         project = await self.project_repo.create(project)
         await create_audit_log(org_id, user_id, "project.create", "project", project.id)
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_PROJECT_CREATED,
+                organization_id=org_id,
+                user_id=user_id,
+                resource_type="project",
+                resource_id=project.id,
+                payload={"name": project.name},
+            )
+        )
         return project
 
     async def get_project(self, project_id: str) -> Project:

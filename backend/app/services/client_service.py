@@ -1,10 +1,12 @@
 from typing import Optional
 
 from app.domain.entities.client import Client
+from app.domain.events import DomainEvent, EVENT_CLIENT_CREATED
 from app.domain.exceptions import EntityNotFoundError
 from app.domain.interfaces import ClientRepository
 from app.infrastructure.database.mongo_repositories.client_repo import MongoClientRepository
 from app.infrastructure.log.audit import create_audit_log
+from app.infrastructure.events.bus import event_bus
 
 
 class ClientService:
@@ -15,6 +17,16 @@ class ClientService:
         client = Client(organization_id=org_id, created_by=user_id, **data)
         client = await self.client_repo.create(client)
         await create_audit_log(org_id, user_id, "client.create", "client", client.id)
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_CLIENT_CREATED,
+                organization_id=org_id,
+                user_id=user_id,
+                resource_type="client",
+                resource_id=client.id,
+                payload={"name": client.name},
+            )
+        )
         return client
 
     async def get_client(self, client_id: str) -> Client:

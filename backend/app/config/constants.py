@@ -69,6 +69,7 @@ DEFAULT_PERMISSIONS = {
         "settings:read", "settings:update",
         "billing:read", "billing:update",
         "knowledge:create", "knowledge:read", "knowledge:update", "knowledge:delete",
+        "activity:read",
     ],
     UserRole.EDITOR: [
         "proposal:create", "proposal:read", "proposal:update",
@@ -78,6 +79,7 @@ DEFAULT_PERMISSIONS = {
         "workspace:read",
         "knowledge:read",
         "settings:read",
+        "activity:read",
     ],
     UserRole.VIEWER: [
         "proposal:read",
@@ -86,6 +88,7 @@ DEFAULT_PERMISSIONS = {
         "template:read",
         "workspace:read",
         "knowledge:read",
+        "activity:read",
     ],
 }
 

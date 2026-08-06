@@ -56,5 +56,9 @@ async def ensure_indexes() -> None:
     await database.audit_logs.create_index("organization_id")
     await database.audit_logs.create_index([("organization_id", 1), ("created_at", -1)])
 
+    await database.activity_events.create_index("organization_id")
+    await database.activity_events.create_index([("organization_id", 1), ("occurred_at", -1)])
+    await database.activity_events.create_index([("organization_id", 1), ("event_type", 1), ("occurred_at", -1)])
+
     await database.usage.create_index("organization_id")
     await database.usage.create_index([("organization_id", 1), ("created_at", -1)])

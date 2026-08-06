@@ -1,10 +1,12 @@
 from typing import Optional
 
 from app.domain.entities.workspace import Workspace
+from app.domain.events import DomainEvent, EVENT_WORKSPACE_CREATED
 from app.domain.exceptions import EntityNotFoundError
 from app.domain.interfaces import WorkspaceRepository
 from app.infrastructure.database.mongo_repositories.workspace_repo import MongoWorkspaceRepository
 from app.infrastructure.log.audit import create_audit_log
+from app.infrastructure.events.bus import event_bus
 
 
 class WorkspaceService:
@@ -27,6 +29,16 @@ class WorkspaceService:
             action="workspace.create",
             resource_type="workspace",
             resource_id=workspace.id,
+        )
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_WORKSPACE_CREATED,
+                organization_id=org_id,
+                user_id=created_by,
+                resource_type="workspace",
+                resource_id=workspace.id,
+                payload={"name": name},
+            )
         )
 
         return workspace

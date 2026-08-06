@@ -2,10 +2,12 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.domain.entities.proposal import Proposal
+from app.domain.events import DomainEvent, EVENT_PROPOSAL_CREATED
 from app.domain.exceptions import EntityNotFoundError
 from app.domain.interfaces import ProposalRepository
 from app.infrastructure.database.mongo_repositories.proposal_repo import MongoProposalRepository
 from app.infrastructure.log.audit import create_audit_log
+from app.infrastructure.events.bus import event_bus
 
 
 class ProposalService:
@@ -16,6 +18,16 @@ class ProposalService:
         proposal = Proposal(organization_id=org_id, created_by=user_id, **data)
         proposal = await self.proposal_repo.create(proposal)
         await create_audit_log(org_id, user_id, "proposal.create", "proposal", proposal.id)
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_PROPOSAL_CREATED,
+                organization_id=org_id,
+                user_id=user_id,
+                resource_type="proposal",
+                resource_id=proposal.id,
+                payload={"title": proposal.title},
+            )
+        )
         return proposal
 
     async def get_proposal(self, proposal_id: str) -> Proposal:

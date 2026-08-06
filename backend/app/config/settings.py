@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_ORG: int = 1000
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    ENABLE_ACTIVITY_EVENTS: bool = True
+
     MAX_UPLOAD_SIZE_MB: int = 10
     STORAGE_BACKEND: str = "local"
     DEFAULT_LOGO_PATH: str = "app/assets/logo.png"

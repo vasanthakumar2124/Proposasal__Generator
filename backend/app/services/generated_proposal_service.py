@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 
+from app.domain.events import DomainEvent, EVENT_PROPOSAL_GENERATED, EVENT_PROPOSAL_FAILED
+from app.infrastructure.events.bus import event_bus
 from app.models.generated_proposal_model import generated_proposal_collection
 
 logger = logging.getLogger("proposalcraft.generated_proposal_service")
@@ -157,6 +159,16 @@ class GeneratedProposalService:
             {"$set": doc},
         )
         logger.info("Generated proposal '%s' (%s) finalized", title, doc_id)
+        await event_bus.publish(
+            DomainEvent(
+                event_type=EVENT_PROPOSAL_GENERATED if not error else EVENT_PROPOSAL_FAILED,
+                organization_id=org_id,
+                user_id=user_id,
+                resource_type="proposal",
+                resource_id=doc_id,
+                payload={"title": title, "error": error},
+            )
+        )
         return {**doc, "_id": doc_id}
 
     async def list_proposals(self, org_id: str) -> list[dict]:
