@@ -1,0 +1,4 @@
+{
+  "ignore": "^(ToastItem|store|BadgeProps|badgeVariants|ButtonProps|buttonVariants|DialogPortal|DialogOverlay|DialogClose|InputProps|Select|SelectGroup|SelectValue|SelectTrigger|SelectContent|SelectItem|logout|toggleSidebar|setTheme|openModal|closeModal|addToast|removeToast|setCurrentWorkspace)$",
+  "skip": []
+}

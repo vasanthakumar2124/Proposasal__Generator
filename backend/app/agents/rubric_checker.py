@@ -155,7 +155,7 @@ def numbers_match_engine_output(document: dict, engine_context: dict) -> list[st
     return mismatches
 
 
-def check_word_count(document: dict, min_words: int = 120, max_words: int = 5000) -> list[str]:
+def check_word_count(document: dict, max_words: int = 5000) -> list[str]:
     sections = document.get("sections", document)
     rules = SECTION_RULES
     issues = []

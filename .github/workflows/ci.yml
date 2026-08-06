@@ -37,6 +37,11 @@ jobs:
           pip install mypy
           mypy app/ --ignore-missing-imports || true
 
+      - name: Dead code check (vulture)
+        run: |
+          pip install vulture
+          vulture app/ --min-confidence 80
+
       - name: Run tests
         run: |
           pip install pytest pytest-asyncio
@@ -70,6 +75,9 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Dead code check (ts-prune)
+        run: npx ts-prune
 
       - name: Build
         run: npm run build
