@@ -13,6 +13,7 @@ import {
   CreditCard,
   BarChart3,
   Activity as ActivityIcon,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/workspace', icon: FolderOpen, label: 'Workspace' },
   { to: '/projects', icon: FileText, label: 'Projects' },
   { to: '/clients', icon: Users, label: 'Clients' },
+  { to: '/knowledge', icon: BookOpen, label: 'Knowledge' },
   { to: '/generate', icon: Sparkles, label: 'Generate' },
   { to: '/history', icon: ScrollText, label: 'Proposals' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },

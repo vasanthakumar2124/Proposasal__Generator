@@ -20,6 +20,7 @@ import ProposalHistory from './pages/ProposalHistory'
 import BillingPage from './pages/Billing'
 import AnalyticsPage from './pages/Analytics'
 import ActivityPage from './pages/Activity'
+import KnowledgeBase from './pages/KnowledgeBase'
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
                   <Route path="/billing" element={<BillingPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                   <Route path="/activity" element={<ActivityPage />} />
+                  <Route path="/knowledge" element={<KnowledgeBase />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Route>
 

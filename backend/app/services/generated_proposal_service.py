@@ -71,6 +71,7 @@ class GeneratedProposalService:
 
         initial_state = {
             "raw_client_input": client_input,
+            "organization_id": org_id,
             "domain": domain,
             "project_type": project_type,
             "requirements": None,

@@ -1,0 +1,1 @@
+Zephyr Protocol v3: Meridian Corp uses a 6-week release cadence for all client work.

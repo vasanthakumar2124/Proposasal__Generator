@@ -1,17 +1,49 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 
 from app.domain.entities.user import User
 from app.api.deps import require_permission, get_current_org
 from app.rag.schemas import SearchQuery, SearchResult, IngestDocument, CollectionInfo
 from app.rag.service import qdrant_service
 from app.rag.ingest import ingest_pipeline
+from app.rag.loader import load_pdf, load_docx, load_text_file
+from app.services.upload_service import upload_service
 
 logger = logging.getLogger("proposalcraft.rag.router")
 
 router = APIRouter(tags=["rag"])
+
+
+@router.post("/ingest/file", response_model=dict)
+async def ingest_file(
+    file: UploadFile = File(...),
+    collection_name: str = Form("industry_knowledge"),
+    user: User = Depends(require_permission("knowledge:create")),
+    org_id: str = Depends(get_current_org),
+):
+    try:
+        path, ext = await upload_service.save(file, org_id)
+        if ext == ".pdf":
+            docs = load_pdf(str(path))
+        elif ext == ".docx":
+            docs = load_docx(str(path))
+        else:
+            docs = load_text_file(str(path))
+        content = "\n\n".join(d.page_content if hasattr(d, "page_content") else d.get("page_content", "") for d in docs)
+        if not content.strip():
+            raise HTTPException(status_code=422, detail="No extractable text found in file")
+        point_ids = ingest_pipeline.ingest_text(
+            IngestDocument(content=content, collection_name=collection_name),
+            org_id=org_id,
+        )
+        return {"ingested": len(point_ids), "point_ids": point_ids, "source": file.filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("File ingest failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/collections", response_model=List[CollectionInfo])

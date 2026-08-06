@@ -307,6 +307,7 @@ def rag_node(state: ProposalState) -> ProposalState:
     domain = reqs.get("domain", "custom")
     description = reqs.get("description", "")
     project_type = reqs.get("project_type", "web_app")
+    org_id = state.get("organization_id")
 
     try:
         from app.rag import qdrant_service
@@ -317,6 +318,13 @@ def rag_node(state: ProposalState) -> ProposalState:
         if len(query.strip()) > 10:
             for coll in ["industry_knowledge", "best_practices", "technology_knowledge", "pricing_data", "case_studies"]:
                 try:
+                    # Org-scoped knowledge (uploaded documents) takes priority,
+                    # then the shared built-in knowledge bases.
+                    if org_id:
+                        for r in qdrant_service.search(query, collection_name=coll, top_k=3, org_id=org_id):
+                            rag_chunks.append(r.content)
+                            if coll == "case_studies":
+                                case_study_chunks.append(r.content)
                     results = qdrant_service.search(query, collection_name=coll, top_k=3)
                     for r in results:
                         rag_chunks.append(r.content)
@@ -324,7 +332,7 @@ def rag_node(state: ProposalState) -> ProposalState:
                             case_study_chunks.append(r.content)
                 except Exception:
                     continue
-        state["rag_chunks"] = rag_chunks[:10]
+        state["rag_chunks"] = rag_chunks[:12]
         state["case_study_chunks"] = case_study_chunks[:3]
     except Exception as e:
         logger.warning("Qdrant search failed, using empty RAG: %s", e)

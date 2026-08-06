@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     ENABLE_USAGE_METERING: bool = True
 
     MAX_UPLOAD_SIZE_MB: int = 10
+    UPLOAD_DIR: str = "uploads"
     STORAGE_BACKEND: str = "local"
     DEFAULT_LOGO_PATH: str = "app/assets/logo.png"
     ENABLE_DIAGRAMS_APPENDIX: bool = True

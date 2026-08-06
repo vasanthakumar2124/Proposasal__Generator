@@ -3,6 +3,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.config.settings import settings
 from app.domain.entities.user import User
 from app.rag.router import router
 from app.api.deps import get_current_user, get_current_org
@@ -33,6 +34,8 @@ class FakeUser(User):
 
 
 def make_client(monkeypatch, service, user_org="org-a"):
+    monkeypatch.setattr(settings, "QDRANT_URL", "")
+    monkeypatch.setattr(settings, "QDRANT_API_KEY", "")
     monkeypatch.setattr("app.rag.router.qdrant_service", service)
     monkeypatch.setattr("app.rag.ingest.qdrant_service", service)
     monkeypatch.setattr("app.rag.service.embedding_service", FakeEmbed())
@@ -58,6 +61,7 @@ class TestRagAuthRequired:
             ("GET", "/rag/collections", None),
             ("POST", "/rag/search", {"query": "test", "collection_name": "industry_knowledge"}),
             ("POST", "/rag/ingest", {"content": "test content", "collection_name": "industry_knowledge"}),
+            ("POST", "/rag/ingest/file", None),
             ("POST", "/rag/seed", None),
             ("DELETE", "/rag/documents/industry_knowledge/abc123", None),
         ]

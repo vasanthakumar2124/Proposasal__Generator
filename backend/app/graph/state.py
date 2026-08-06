@@ -3,6 +3,7 @@ from typing import TypedDict, Optional, Any
 
 class ProposalState(TypedDict):
     raw_client_input: str
+    organization_id: Optional[str]
     requirements: Optional[dict]
     rag_context: Optional[dict]
     business_context: Optional[dict]
