@@ -1,34 +1,44 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.domain.entities.user import User
+from app.api.deps import require_permission, get_current_org
 from app.rag.schemas import SearchQuery, SearchResult, IngestDocument, CollectionInfo
 from app.rag.service import qdrant_service
 from app.rag.ingest import ingest_pipeline
 
 logger = logging.getLogger("proposalcraft.rag.router")
 
-router = APIRouter(prefix="/rag", tags=["rag"])
+router = APIRouter(tags=["rag"])
 
 
 @router.get("/collections", response_model=List[CollectionInfo])
-async def list_collections():
+async def list_collections(
+    user: User = Depends(require_permission("knowledge:read")),
+    org_id: str = Depends(get_current_org),
+):
     try:
-        return qdrant_service.get_collections()
+        return qdrant_service.get_collections(org_id=org_id)
     except Exception as e:
         logger.error("Failed to list collections: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/search", response_model=List[SearchResult])
-async def search_documents(query: SearchQuery):
+async def search_documents(
+    query: SearchQuery,
+    user: User = Depends(require_permission("knowledge:read")),
+    org_id: str = Depends(get_current_org),
+):
     try:
         return qdrant_service.search(
             query=query.query,
             collection_name=query.collection_name,
             top_k=query.top_k,
             score_threshold=query.score_threshold,
+            org_id=org_id,
         )
     except Exception as e:
         logger.error("Search failed: %s", e, exc_info=True)
@@ -36,9 +46,13 @@ async def search_documents(query: SearchQuery):
 
 
 @router.post("/ingest", response_model=dict)
-async def ingest_document(document: IngestDocument):
+async def ingest_document(
+    document: IngestDocument,
+    user: User = Depends(require_permission("knowledge:create")),
+    org_id: str = Depends(get_current_org),
+):
     try:
-        point_ids = ingest_pipeline.ingest_text(document)
+        point_ids = ingest_pipeline.ingest_text(document, org_id=org_id)
         return {"ingested": len(point_ids), "point_ids": point_ids}
     except Exception as e:
         logger.error("Ingest failed: %s", e, exc_info=True)
@@ -46,9 +60,12 @@ async def ingest_document(document: IngestDocument):
 
 
 @router.post("/seed", response_model=dict)
-async def seed_knowledge():
+async def seed_knowledge(
+    user: User = Depends(require_permission("knowledge:create")),
+    org_id: str = Depends(get_current_org),
+):
     try:
-        ingest_pipeline.seed_default_knowledge()
+        ingest_pipeline.seed_default_knowledge(org_id=org_id)
         return {"status": "ok", "message": "Default knowledge seeded"}
     except Exception as e:
         logger.error("Seed failed: %s", e, exc_info=True)
@@ -56,9 +73,14 @@ async def seed_knowledge():
 
 
 @router.delete("/documents/{collection_name}/{point_id}")
-async def delete_document(collection_name: str, point_id: str):
+async def delete_document(
+    collection_name: str,
+    point_id: str,
+    user: User = Depends(require_permission("knowledge:delete")),
+    org_id: str = Depends(get_current_org),
+):
     try:
-        qdrant_service.delete_document(collection_name, point_id)
+        qdrant_service.delete_document(collection_name, point_id, org_id=org_id)
         return {"deleted": True}
     except Exception as e:
         logger.error("Delete failed: %s", e, exc_info=True)

@@ -12,7 +12,7 @@ class IngestPipeline:
     def __init__(self):
         self.chunker = DocumentChunker()
 
-    def ingest_text(self, document: IngestDocument) -> list[str]:
+    def ingest_text(self, document: IngestDocument, org_id: str | None = None) -> list[str]:
         chunks = self.chunker.chunk_text(document.content)
         point_ids = []
         for chunk in chunks:
@@ -20,16 +20,20 @@ class IngestPipeline:
                 collection_name=document.collection_name,
                 content=chunk,
                 metadata=document.metadata,
+                org_id=org_id,
             )
             point_ids.append(pid)
         logger.info(
-            "Ingested %d chunks into collection '%s'",
+            "Ingested %d chunks into collection '%s' (org=%s)",
             len(point_ids),
             document.collection_name,
+            org_id,
         )
         return point_ids
 
-    def ingest_documents(self, documents: list[dict], collection_name: str) -> list[str]:
+    def ingest_documents(
+        self, documents: list[dict], collection_name: str, org_id: str | None = None
+    ) -> list[str]:
         point_ids = []
         for doc in documents:
             content = doc.get("content", doc.get("page_content", ""))
@@ -42,15 +46,16 @@ class IngestPipeline:
                     collection_name=collection_name,
                     content=chunk,
                     metadata=metadata,
+                    org_id=org_id,
                 )
                 point_ids.append(pid)
-        logger.info("Ingested %d chunks total into '%s'", len(point_ids), collection_name)
+        logger.info("Ingested %d chunks total into '%s' (org=%s)", len(point_ids), collection_name, org_id)
         return point_ids
 
-    def seed_default_knowledge(self) -> None:
+    def seed_default_knowledge(self, org_id: str | None = None) -> None:
         qdrant_service.initialize()
         for collection_name, data in DEFAULT_KNOWLEDGE.items():
-            existing = qdrant_service.count_documents(collection_name)
+            existing = qdrant_service.count_documents(collection_name, org_id=org_id)
             if existing > 0:
                 logger.info("Collection '%s' already has %d documents, skipping seed", collection_name, existing)
                 continue
@@ -59,6 +64,7 @@ class IngestPipeline:
                     collection_name=collection_name,
                     content=entry["content"],
                     metadata=entry.get("metadata", {}),
+                    org_id=org_id,
                 )
             logger.info("Seeded %d documents into '%s'", len(data), collection_name)
 
