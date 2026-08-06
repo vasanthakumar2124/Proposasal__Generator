@@ -14,6 +14,7 @@ from app.billing.router import router as billing_router
 from app.analytics.router import router as analytics_router
 from app.admin.router import router as admin_router
 from app.api.v1.activity import router as activity_router
+from app.api.v1.realtime import router as realtime_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -31,3 +32,4 @@ api_router.include_router(billing_router, prefix="/billing", tags=["Billing"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 api_router.include_router(admin_router, prefix="/admin", tags=["Admin"])
 api_router.include_router(activity_router, prefix="/activity", tags=["Activity"])
+api_router.include_router(realtime_router, prefix="/realtime", tags=["Realtime"])
