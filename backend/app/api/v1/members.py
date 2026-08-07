@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.domain.entities.user import User
 from app.domain.exceptions import DuplicateEntityError
 from app.schemas.auth import UserResponse
 from app.schemas.organization import AddMemberRequest, MemberResponse
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.member_service import MemberService
-from app.api.deps import get_current_user, get_current_org, require_permission
 from app.infrastructure.di.container import get_service
+from app.middleware.tenant_context import TenantContext, get_tenant_context
 
 router = APIRouter()
 
@@ -15,16 +14,15 @@ router = APIRouter()
 @router.post("", response_model=UserResponse, status_code=201)
 async def invite_member(
     body: AddMemberRequest,
-    user: User = Depends(require_permission("member:create")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("member:create")),
     svc: MemberService = Depends(get_service(MemberService)),
 ):
     try:
         member = await svc.add_member(
-            org_id=org_id,
+            org_id=ctx.organization_id,
             email=body.email,
             role=body.role,
-            invited_by=user.id,
+            invited_by=ctx.user.id,
         )
     except DuplicateEntityError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -41,11 +39,10 @@ async def invite_member(
 async def list_members(
     skip: int = 0,
     limit: int = 100,
-    user: User = Depends(require_permission("member:read")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("member:read")),
     svc: MemberService = Depends(get_service(MemberService)),
 ):
-    members = await svc.list_members(org_id, skip=skip, limit=limit)
+    members = await svc.list_members(ctx.organization_id, skip=skip, limit=limit)
     items = [
         MemberResponse(
             id=m.id, name=m.name, email=m.email,
@@ -61,8 +58,7 @@ async def list_members(
 async def update_member_role(
     user_id: str,
     body: dict,
-    user: User = Depends(require_permission("member:update")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("member:update")),
     svc: MemberService = Depends(get_service(MemberService)),
 ):
     role = body.get("role")
@@ -71,10 +67,10 @@ async def update_member_role(
 
     try:
         member = await svc.update_member_role(
-            org_id=org_id,
+            org_id=ctx.organization_id,
             user_id=user_id,
             new_role=role,
-            updated_by=user.id,
+            updated_by=ctx.user.id,
         )
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -89,15 +85,14 @@ async def update_member_role(
 @router.delete("/{user_id}", response_model=MessageResponse)
 async def remove_member(
     user_id: str,
-    user: User = Depends(require_permission("member:delete")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("member:delete")),
     svc: MemberService = Depends(get_service(MemberService)),
 ):
     try:
         await svc.remove_member(
-            org_id=org_id,
+            org_id=ctx.organization_id,
             user_id=user_id,
-            removed_by=user.id,
+            removed_by=ctx.user.id,
         )
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))

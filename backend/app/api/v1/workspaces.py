@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.domain.entities.user import User
 from app.schemas.workspace import WorkspaceCreateRequest, WorkspaceUpdateRequest, WorkspaceResponse
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.workspace_service import WorkspaceService
-from app.api.deps import get_current_user, get_current_org, require_permission
 from app.infrastructure.di.container import get_service
+from app.middleware.tenant_context import TenantContext, get_tenant_context, ensure_tenant_access
 
 router = APIRouter()
 
@@ -13,15 +12,14 @@ router = APIRouter()
 @router.post("", response_model=WorkspaceResponse, status_code=201)
 async def create_workspace(
     body: WorkspaceCreateRequest,
-    user: User = Depends(require_permission("workspace:create")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:create")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     ws = await svc.create_workspace(
         name=body.name,
         description=body.description,
-        org_id=org_id,
-        created_by=user.id,
+        org_id=ctx.organization_id,
+        created_by=ctx.user.id,
     )
     return WorkspaceResponse(
         _id=ws.id, organization_id=ws.organization_id, name=ws.name,
@@ -35,11 +33,10 @@ async def create_workspace(
 async def list_workspaces(
     skip: int = 0,
     limit: int = 100,
-    user: User = Depends(require_permission("workspace:read")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:read")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    workspaces = await svc.list_workspaces(org_id, skip=skip, limit=limit)
+    workspaces = await svc.list_workspaces(ctx.organization_id, skip=skip, limit=limit)
     items = [WorkspaceResponse(
         _id=w.id, organization_id=w.organization_id, name=w.name,
         description=w.description, created_by=w.created_by,
@@ -52,7 +49,7 @@ async def list_workspaces(
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: str,
-    user: User = Depends(require_permission("workspace:read")),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:read")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
@@ -60,8 +57,7 @@ async def get_workspace(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    if ws.organization_id != user.organization_id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    ensure_tenant_access(ws, ctx)
 
     return WorkspaceResponse(
         _id=ws.id, organization_id=ws.organization_id, name=ws.name,
@@ -75,7 +71,7 @@ async def get_workspace(
 async def update_workspace(
     workspace_id: str,
     body: WorkspaceUpdateRequest,
-    user: User = Depends(require_permission("workspace:update")),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:update")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
@@ -87,8 +83,7 @@ async def update_workspace(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    if ws.organization_id != user.organization_id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    ensure_tenant_access(ws, ctx)
 
     return WorkspaceResponse(
         _id=ws.id, organization_id=ws.organization_id, name=ws.name,
@@ -101,13 +96,12 @@ async def update_workspace(
 @router.delete("/{workspace_id}", response_model=MessageResponse)
 async def delete_workspace(
     workspace_id: str,
-    user: User = Depends(require_permission("workspace:delete")),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:delete")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
         ws = await svc.get_workspace(workspace_id)
-        if ws.organization_id != user.organization_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        ensure_tenant_access(ws, ctx)
         await svc.delete_workspace(workspace_id)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -118,13 +112,12 @@ async def delete_workspace(
 async def add_member(
     workspace_id: str,
     user_id: str,
-    user: User = Depends(require_permission("workspace:update")),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:update")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
         ws = await svc.get_workspace(workspace_id)
-        if ws.organization_id != user.organization_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        ensure_tenant_access(ws, ctx)
         ws = await svc.add_member(workspace_id, user_id)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -140,13 +133,12 @@ async def add_member(
 async def remove_member(
     workspace_id: str,
     user_id: str,
-    user: User = Depends(require_permission("workspace:update")),
+    ctx: TenantContext = Depends(get_tenant_context("workspace:update")),
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
         ws = await svc.get_workspace(workspace_id)
-        if ws.organization_id != user.organization_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        ensure_tenant_access(ws, ctx)
         ws = await svc.remove_member(workspace_id, user_id)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))

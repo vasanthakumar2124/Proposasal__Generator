@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, get_current_org, require_permission
-from app.domain.entities.user import User
 from app.infrastructure.database.mongodb import get_database
 from app.schemas.common import PaginatedResponse
+from app.middleware.tenant_context import TenantContext, get_tenant_context
 
 router = APIRouter()
 
@@ -13,11 +12,10 @@ async def list_activity(
     skip: int = 0,
     limit: int = Query(50, ge=1, le=200),
     event_type: str = Query(None),
-    user: User = Depends(require_permission("activity:read")),
-    org_id: str = Depends(get_current_org),
+    ctx: TenantContext = Depends(get_tenant_context("activity:read")),
 ):
     db = await get_database()
-    query: dict = {"organization_id": org_id}
+    query: dict = {"organization_id": ctx.organization_id}
     if event_type:
         query["event_type"] = event_type
     cursor = (

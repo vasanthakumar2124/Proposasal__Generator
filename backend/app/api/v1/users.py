@@ -5,8 +5,9 @@ from app.schemas.auth import UserResponse
 from app.schemas.organization import MemberResponse
 from app.schemas.common import PaginatedResponse
 from app.services.user_service import UserService
-from app.api.deps import get_current_user, get_current_org, require_permission
+from app.api.deps import get_current_user
 from app.infrastructure.di.container import get_service
+from app.middleware.tenant_context import TenantContext, get_tenant_context
 
 router = APIRouter()
 
@@ -30,11 +31,10 @@ async def get_me(user: User = Depends(get_current_user)):
 async def list_members(
     skip: int = 0,
     limit: int = 100,
-    org_id: str = Depends(get_current_org),
-    user: User = Depends(require_permission("member:read")),
+    ctx: TenantContext = Depends(get_tenant_context("member:read")),
     user_service: UserService = Depends(get_service(UserService)),
 ):
-    members = await user_service.list_organization_members(org_id, skip=skip, limit=limit)
+    members = await user_service.list_organization_members(ctx.organization_id, skip=skip, limit=limit)
     items = [
         MemberResponse(
             id=m.id,
