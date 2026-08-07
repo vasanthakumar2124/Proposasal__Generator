@@ -44,9 +44,12 @@ export default function GenerateProposal() {
     try {
       setIsGenerating(true)
       const result = await generate.mutateAsync({
-        client_input: clientInput,
-        domain: domain || undefined,
-        project_type: projectType || undefined,
+        data: {
+          client_input: clientInput,
+          domain: domain || undefined,
+          project_type: projectType || undefined,
+        },
+        idempotencyKey: crypto.randomUUID(),
       })
       const id = result.data._id
       const deadline = Date.now() + 15 * 60 * 1000

@@ -23,8 +23,10 @@ export const proposalsApi = {
   updateSection: (id: string, sectionName: string, content: Record<string, unknown>) =>
     apiClient.put<Proposal>(`/proposals/${id}/sections/${sectionName}`, content),
 
-  generate: (data: { client_input: string; domain?: string; project_type?: string }) =>
-    apiClient.post<Proposal>('/proposals/generate', data),
+  generate: (data: { client_input: string; domain?: string; project_type?: string; project_id?: string }, idempotencyKey?: string) =>
+    apiClient.post<Proposal>('/proposals/generate', data, {
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+    }),
 
   exportProposal: (id: string, fmt: string) =>
     apiClient.get(`/proposals/${id}/export/${fmt}`, { responseType: 'blob' }),

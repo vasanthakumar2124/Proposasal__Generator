@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from typing import Optional
 
@@ -153,7 +153,7 @@ async def export_proposal(
 async def generate_proposal(
     body: dict,
     ctx: TenantContext = Depends(get_tenant_context("proposal:create")),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     svc: GeneratedProposalService = Depends(get_service(GeneratedProposalService)),
 ):
     org_id = ctx.organization_id
@@ -164,6 +164,8 @@ async def generate_proposal(
         project_type=body.get("project_type"),
         org_id=org_id,
         user_id=ctx.user.id,
+        idempotency_key=idempotency_key,
+        project_id=body.get("project_id"),
     )
     try:
         generate_proposal_task.delay(
@@ -176,15 +178,11 @@ async def generate_proposal(
         )
         logger.info("Proposal %s enqueued to celery", doc["_id"])
     except Exception as e:
-        logger.warning("Celery enqueue failed, falling back to in-process task: %s", e)
-        background_tasks.add_task(
-            svc.run_and_finalize,
-            doc["_id"],
-            body.get("client_input", ""),
-            org_id,
-            ctx.user.id,
-            body.get("domain"),
-            body.get("project_type"),
+        logger.warning("Celery enqueue failed: %s", e, exc_info=True)
+        await svc.delete_proposal(doc["_id"])
+        raise HTTPException(
+            status_code=503,
+            detail="Generation queue unavailable, please retry",
         )
     return doc
 

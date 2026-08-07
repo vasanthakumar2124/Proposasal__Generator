@@ -27,8 +27,8 @@ export function useDeleteProposal() {
 export function useGenerateProposal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { client_input: string; domain?: string; project_type?: string }) =>
-      proposalsApi.generate(data),
+    mutationFn: (args: { data: { client_input: string; domain?: string; project_type?: string; project_id?: string }; idempotencyKey?: string }) =>
+      proposalsApi.generate(args.data, args.idempotencyKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['proposals'] }),
   })
 }

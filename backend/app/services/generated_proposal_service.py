@@ -1,7 +1,8 @@
 import asyncio
+import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
 
@@ -13,6 +14,8 @@ from app.models.generated_proposal_model import generated_proposal_collection
 
 logger = logging.getLogger("proposalcraft.generated_proposal_service")
 
+DEDUPE_FRESHNESS = timedelta(hours=2)
+
 
 class GeneratedProposalService:
     async def start_generation(
@@ -22,10 +25,40 @@ class GeneratedProposalService:
         user_id: str,
         domain: str | None = None,
         project_type: str | None = None,
+        idempotency_key: str | None = None,
+        project_id: str | None = None,
     ) -> dict:
         """Insert a status=processing placeholder and return immediately so the
         caller (API) can hand the workflow off to a background task. The doc is
-        finalized in-place by run_and_finalize()."""
+        finalized in-place by run_and_finalize().
+
+        Duplicate submissions are deduped: while a generation for this tenant is
+        still processing, an explicit Idempotency-Key (preferred) or an identical
+        (client_input, domain, project_type) request hash returns the in-flight
+        doc instead of starting a new one.
+        """
+        request_hash = hashlib.sha256(
+            json.dumps([client_input, domain, project_type], sort_keys=True).encode()
+        ).hexdigest()
+
+        dedupe_filter: dict = {
+            "organization_id": org_id,
+            "status": "processing",
+            "created_at": {"$gt": datetime.now(timezone.utc) - DEDUPE_FRESHNESS},
+        }
+        if idempotency_key:
+            dedupe_filter["idempotency_key"] = idempotency_key
+        else:
+            dedupe_filter["request_hash"] = request_hash
+        existing = await generated_proposal_collection.find_one(dedupe_filter)
+        if existing:
+            existing["_id"] = str(existing["_id"])
+            logger.info(
+                "Deduped generation: reusing in-flight %s (%s) for %s",
+                existing["proposal_id"], existing["_id"], org_id,
+            )
+            return existing
+
         date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
         new_id = ObjectId()
         doc = {
@@ -46,6 +79,9 @@ class GeneratedProposalService:
             "version": 1,
             "ai_generated": True,
             "generation_metadata": {"rubric_check": None, "rubric_retries": None},
+            "idempotency_key": idempotency_key,
+            "request_hash": request_hash,
+            "project_id": project_id,
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }
