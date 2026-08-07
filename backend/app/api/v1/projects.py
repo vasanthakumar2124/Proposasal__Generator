@@ -53,6 +53,8 @@ async def update_project(
     svc: ProjectService = Depends(get_service(ProjectService)),
 ):
     try:
+        existing = await svc.get_project(project_id)
+        ensure_tenant_access(existing, ctx)
         project = await svc.update_project(project_id, body.model_dump(exclude_unset=True))
         ensure_tenant_access(project, ctx)
         return ProjectResponse(**project.model_dump(by_alias=True))

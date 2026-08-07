@@ -51,6 +51,8 @@ async def update_client(
     svc: ClientService = Depends(get_service(ClientService)),
 ):
     try:
+        existing = await svc.get_client(client_id)
+        ensure_tenant_access(existing, ctx)
         client = await svc.update_client(client_id, body.model_dump(exclude_unset=True))
         ensure_tenant_access(client, ctx)
         return ClientResponse(**client.model_dump(by_alias=True))

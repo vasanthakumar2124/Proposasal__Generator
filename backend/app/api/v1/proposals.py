@@ -90,6 +90,8 @@ async def update_proposal(
     svc: ProposalService = Depends(get_service(ProposalService)),
 ):
     try:
+        existing = await svc.get_proposal(proposal_id)
+        ensure_tenant_access(existing, ctx)
         proposal = await svc.update_proposal(proposal_id, body.model_dump(exclude_unset=True))
         ensure_tenant_access(proposal, ctx)
         return ProposalResponse(**proposal.model_dump(by_alias=True))
@@ -194,6 +196,8 @@ async def update_section(
     svc: ProposalService = Depends(get_service(ProposalService)),
 ):
     try:
+        existing = await svc.get_proposal(proposal_id)
+        ensure_tenant_access(existing, ctx)
         proposal = await svc.update_section(proposal_id, section_name, body)
         ensure_tenant_access(proposal, ctx)
         return ProposalResponse(**proposal.model_dump(by_alias=True))

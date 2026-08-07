@@ -54,10 +54,9 @@ async def get_workspace(
 ):
     try:
         ws = await svc.get_workspace(workspace_id)
+        ensure_tenant_access(ws, ctx)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-    ensure_tenant_access(ws, ctx)
 
     return WorkspaceResponse(
         _id=ws.id, organization_id=ws.organization_id, name=ws.name,
@@ -75,15 +74,16 @@ async def update_workspace(
     svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
     try:
+        existing = await svc.get_workspace(workspace_id)
+        ensure_tenant_access(existing, ctx)
         ws = await svc.update_workspace(
             workspace_id=workspace_id,
             name=body.name,
             description=body.description,
         )
+        ensure_tenant_access(ws, ctx)
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-    ensure_tenant_access(ws, ctx)
 
     return WorkspaceResponse(
         _id=ws.id, organization_id=ws.organization_id, name=ws.name,
