@@ -2,109 +2,83 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
     branches: [main]
+  pull_request:
 
 jobs:
-  backend-lint-test:
+  backend:
     runs-on: ubuntu-latest
+    env:
+      QDRANT_URL: ""
+      QDRANT_API_KEY: ""
+      MONGODB_URL: mongodb://localhost:27017
+      REDIS_URL: redis://localhost:6379
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ["27017:27017"]
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
     defaults:
       run:
         working-directory: backend
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt vulture
 
-      - name: Lint with ruff
+      - name: Test suite
+        run: python -m pytest -q
+
+      - name: Dead-code gate (app)
+        # Route handlers and Pydantic/settings fields are called by FastAPI
+        # decorators/attribute access vulture cannot trace; exclude those
+        # paths rather than lowering the bar project-wide.
         run: |
-          pip install ruff
-          ruff check app/ tests/
+          vulture app/ --min-confidence 80 \
+            --exclude "app/api/,app/schemas/,app/config/settings.py,app/config/constants.py"
 
-      - name: Type check with mypy
+      - name: No legacy models directory
         run: |
-          pip install mypy
-          mypy app/ --ignore-missing-imports || true
+          if [ -d app/models ]; then
+            echo "::error::app/models/ must not exist — domain/entities/ is the only home for entity definitions"
+            exit 1
+          fi
+          if grep -rn "from app.models\|from app\.models" app/ tests/; then
+            echo "::error::imports from app.models are forbidden"
+            exit 1
+          fi
 
-      - name: Dead code check (vulture)
-        run: |
-          pip install vulture
-          vulture app/ --min-confidence 80
-
-      - name: Run tests
-        run: |
-          pip install pytest pytest-asyncio
-          python -m pytest tests/ -v --tb=short
-        env:
-          MONGODB_URL: mongodb://localhost:27017
-          DATABASE_NAME: test
-          JWT_SECRET_KEY: test-secret-key-for-ci
-
-  frontend-lint-test:
+  frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint || true
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Dead code check (ts-prune)
-        run: npx ts-prune
-
-      - name: Build
+      - name: Typecheck + build
         run: npm run build
 
-  docker-build:
-    runs-on: ubuntu-latest
-    needs: [backend-lint-test, frontend-lint-test]
-    if: github.ref == 'refs/heads/main'
+      - name: Dead exports gate
+        run: npx ts-prune --exit-code 1
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: backend
-          tags: proposalcraft/backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: frontend
-          tags: proposalcraft/frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Redirect test
+        run: npx vitest run

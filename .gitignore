@@ -42,4 +42,5 @@ frontend/dist/
 Thumbs.db
 
 # Uploads
-backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep

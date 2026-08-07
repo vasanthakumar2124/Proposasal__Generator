@@ -34,9 +34,6 @@ def client(mongo_db, monkeypatch):
     db, db_name = mongo_db
     monkeypatch.setattr(settings, "QDRANT_URL", "")
     monkeypatch.setattr(settings, "QDRANT_API_KEY", "")
-    monkeypatch.setattr("app.billing.service.subscription_collection", db.subscriptions)
-    monkeypatch.setattr("app.models.generated_proposal_model.generated_proposal_collection", db.generated_proposals)
-    monkeypatch.setattr("app.services.generated_proposal_service.generated_proposal_collection", db.generated_proposals)
     monkeypatch.setattr("app.api.v1.proposals.generate_proposal_task", DummyCeleryTask())
     app = FastAPI()
     app.include_router(api_router)

@@ -7,7 +7,7 @@ from bson import ObjectId
 
 from app.config.settings import settings
 from app.billing.schemas import PLANS, SubscriptionPlan, CheckoutResponse, SubscriptionResponse
-from app.models.subscription_model import subscription_collection
+from app.infrastructure.database.mongodb import get_database
 
 logger = logging.getLogger("proposalcraft.billing")
 
@@ -22,6 +22,10 @@ STRIPE_PRICE_MAP: dict[str, dict[str, str]] = {
 
 
 class StripeService:
+    async def _collection(self):
+        db = await get_database()
+        return db.subscriptions
+
     async def create_checkout_session(self, plan_id: str, interval: str, org_id: str, return_url: str) -> CheckoutResponse:
         if plan_id == "free":
             await self._activate_free_plan(org_id)
@@ -61,7 +65,7 @@ class StripeService:
             logger.debug("Unhandled webhook event: %s", event.type)
 
     async def get_subscription(self, org_id: str) -> Optional[SubscriptionResponse]:
-        sub = await subscription_collection.find_one(
+        sub = await (await self._collection()).find_one(
             {"organization_id": org_id, "status": {"$in": ["active", "past_due", "trialing"]}},
             sort=[("current_period_end", -1)],
         )
@@ -81,12 +85,12 @@ class StripeService:
         )
 
     async def cancel_subscription(self, org_id: str) -> bool:
-        sub = await subscription_collection.find_one({"organization_id": org_id, "status": "active"})
+        sub = await (await self._collection()).find_one({"organization_id": org_id, "status": "active"})
         if not sub or not sub.get("stripe_subscription_id"):
             return False
         try:
             stripe.Subscription.modify(sub["stripe_subscription_id"], cancel_at_period_end=True)
-            await subscription_collection.update_one(
+            await (await self._collection()).update_one(
                 {"_id": sub["_id"]}, {"$set": {"cancel_at_period_end": True}}
             )
             return True
@@ -95,7 +99,7 @@ class StripeService:
             return False
 
     async def create_billing_portal(self, org_id: str, return_url: str) -> str:
-        sub = await subscription_collection.find_one({"organization_id": org_id})
+        sub = await (await self._collection()).find_one({"organization_id": org_id})
         if not sub or not sub.get("stripe_customer_id"):
             session = stripe.billing_portal.Session.create(
                 customer=sub["stripe_customer_id"],
@@ -106,7 +110,7 @@ class StripeService:
 
     async def _activate_free_plan(self, org_id: str) -> None:
         now = datetime.now(timezone.utc)
-        await subscription_collection.update_one(
+        await (await self._collection()).update_one(
             {"organization_id": org_id, "plan_id": "free"},
             {"$set": {
                 "plan_id": "free", "status": "active",
@@ -126,7 +130,7 @@ class StripeService:
         if sub_id:
             sub = stripe.Subscription.retrieve(sub_id)
             now = datetime.now(timezone.utc)
-            await subscription_collection.update_one(
+            await (await self._collection()).update_one(
                 {"organization_id": org_id},
                 {"$set": {
                     "plan_id": plan_id,
@@ -147,7 +151,7 @@ class StripeService:
                 sub = stripe.Subscription.retrieve(sub_id)
                 org_id = sub.metadata.get("org_id")
                 if org_id:
-                    await subscription_collection.update_one(
+                    await (await self._collection()).update_one(
                         {"organization_id": org_id},
                         {"$set": {
                             "status": sub.status,
@@ -161,7 +165,7 @@ class StripeService:
     async def _handle_subscription_updated(self, sub: stripe.Subscription) -> None:
         org_id = sub.metadata.get("org_id")
         if org_id:
-            await subscription_collection.update_one(
+            await (await self._collection()).update_one(
                 {"organization_id": org_id},
                 {"$set": {
                     "status": sub.status,
@@ -173,7 +177,7 @@ class StripeService:
     async def _handle_subscription_deleted(self, sub: stripe.Subscription) -> None:
         org_id = sub.metadata.get("org_id")
         if org_id:
-            await subscription_collection.update_one(
+            await (await self._collection()).update_one(
                 {"organization_id": org_id},
                 {"$set": {"status": "canceled"}},
             )

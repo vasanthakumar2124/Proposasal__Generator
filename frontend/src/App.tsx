@@ -13,7 +13,6 @@ import Dashboard from './pages/Dashboard'
 import WorkspacePage from './pages/Workspace'
 import Clients from './pages/Clients'
 import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
 import ProjectHub from './pages/ProjectHub'
 import GenerateProposal from './pages/GenerateProposal'
 import ProposalDetail from './pages/ProposalDetail'
@@ -39,7 +38,7 @@ function App() {
                   <Route path="/workspace" element={<WorkspacePage />} />
                   <Route path="/clients" element={<Clients />} />
                   <Route path="/projects" element={<Projects />} />
-                  <Route path="/projects/:id" element={<ProjectDetail />} />
+                  <Route path="/projects/:id" element={<Navigate to="/projects/:id/hub" replace />} />
                   <Route path="/projects/:id/hub" element={<ProjectHub />} />
                   <Route path="/generate" element={<GenerateProposal />} />
                   <Route path="/proposals/:id" element={<ProposalDetail />} />

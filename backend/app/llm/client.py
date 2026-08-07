@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 import re
 import time
 from dataclasses import dataclass, field
@@ -157,7 +158,7 @@ class LLMClient:
             timeout=1800,
         )
         last_error = None
-        for attempt in range(1, 4):
+        for attempt in range(1, 6):
             try:
                 response = client.chat.completions.create(
                     model=model,
@@ -179,9 +180,9 @@ class LLMClient:
                 last_error = e
                 if not self._is_transient_nvidia(e):
                     raise
-                wait = 30 * attempt
+                wait = 30 * attempt + random.uniform(0, 5)
                 logger.warning(
-                    "NVIDIA transient failure (attempt %d/3): %s — retrying in %ds",
+                    "NVIDIA transient failure (attempt %d/5): %s — retrying in %.0fs",
                     attempt, e, wait,
                 )
                 time.sleep(wait)

@@ -36,7 +36,6 @@ def client(mongo_db, monkeypatch):
     db, db_name = mongo_db
     monkeypatch.setattr(settings, "QDRANT_URL", "")
     monkeypatch.setattr(settings, "QDRANT_API_KEY", "")
-    monkeypatch.setattr("app.billing.service.subscription_collection", db.subscriptions)
     app = FastAPI()
     app.include_router(api_router)
     with TestClient(app) as c:

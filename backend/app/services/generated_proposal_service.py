@@ -7,10 +7,10 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 
 from app.domain.events import DomainEvent, EVENT_PROPOSAL_GENERATED, EVENT_PROPOSAL_FAILED
+from app.infrastructure.database.mongodb import get_database
 from app.infrastructure.events.bus import event_bus
 from app.infrastructure.usage.context import set_usage_context
 from app.infrastructure.usage.meter import set_usage_loop, usage_meter
-from app.models.generated_proposal_model import generated_proposal_collection
 
 logger = logging.getLogger("proposalcraft.generated_proposal_service")
 
@@ -18,6 +18,10 @@ DEDUPE_FRESHNESS = timedelta(hours=2)
 
 
 class GeneratedProposalService:
+    async def _collection(self):
+        db = await get_database()
+        return db.generated_proposals
+
     async def start_generation(
         self,
         client_input: str,
@@ -52,7 +56,7 @@ class GeneratedProposalService:
             dedupe_filter["idempotency_key"] = idempotency_key
         else:
             dedupe_filter["request_hash"] = request_hash
-        existing = await generated_proposal_collection.find_one(dedupe_filter)
+        existing = await (await self._collection()).find_one(dedupe_filter)
         if existing:
             existing["_id"] = str(existing["_id"])
             logger.info(
@@ -87,7 +91,7 @@ class GeneratedProposalService:
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
         }
-        await generated_proposal_collection.insert_one(doc)
+        await (await self._collection()).insert_one(doc)
         doc["_id"] = str(doc["_id"])
         await usage_meter.record_proposal_generation(org_id, user_id, str(doc["_id"]))
         logger.info("Generation started: %s (%s)", doc["proposal_id"], doc["_id"])
@@ -200,7 +204,7 @@ class GeneratedProposalService:
             "updated_at": datetime.now(timezone.utc),
         }
 
-        await generated_proposal_collection.update_one(
+        await (await self._collection()).update_one(
             {"_id": ObjectId(doc_id)},
             {"$set": doc},
         )
@@ -219,7 +223,7 @@ class GeneratedProposalService:
         return {**doc, "_id": doc_id}
 
     async def list_proposals(self, org_id: str) -> list[dict]:
-        cursor = generated_proposal_collection.find(
+        cursor = (await self._collection()).find(
             {"organization_id": org_id}
         ).sort("created_at", -1)
         proposals = []
@@ -230,11 +234,11 @@ class GeneratedProposalService:
 
     async def get_proposal(self, proposal_id: str) -> dict | None:
         from bson import ObjectId
-        p = await generated_proposal_collection.find_one({"_id": ObjectId(proposal_id)})
+        p = await (await self._collection()).find_one({"_id": ObjectId(proposal_id)})
         if p:
             p["_id"] = str(p["_id"])
         return p
 
     async def delete_proposal(self, proposal_id: str) -> bool:
-        result = await generated_proposal_collection.delete_one({"_id": ObjectId(proposal_id)})
+        result = await (await self._collection()).delete_one({"_id": ObjectId(proposal_id)})
         return result.deleted_count > 0
