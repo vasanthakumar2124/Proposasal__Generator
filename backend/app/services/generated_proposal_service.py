@@ -46,6 +46,8 @@ class GeneratedProposalService:
             "status": "processing",
             "created_at": {"$gt": datetime.now(timezone.utc) - DEDUPE_FRESHNESS},
         }
+        if project_id:
+            dedupe_filter["project_id"] = project_id
         if idempotency_key:
             dedupe_filter["idempotency_key"] = idempotency_key
         else:

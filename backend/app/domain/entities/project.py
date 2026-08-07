@@ -21,6 +21,12 @@ class Project(BaseModel):
     project_type: str = "custom"
     status: str = "draft"
     proposal_ids: list[str] = Field(default_factory=list)
+    goal: str = ""
+    budget: Optional[float] = None
+    currency: str = "USD"
+    timeline: Optional[str] = None
+    key_features: list[str] = Field(default_factory=list)
+    notes: str = ""
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

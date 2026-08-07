@@ -8,7 +8,7 @@ import { Input } from '../components/ui/Input'
 import { Badge } from '../components/ui/Badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/Dialog'
 import { Skeleton } from '../components/ui/Skeleton'
-import { Plus, FileText, Search } from 'lucide-react'
+import { Plus, FileText, Search, LayoutDashboard } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -86,9 +86,22 @@ export default function Projects() {
                       <FileText className="h-5 w-5 text-primary" />
                       {project.name}
                     </CardTitle>
-                    <Badge variant={project.status === 'active' ? 'success' : 'secondary'}>
-                      {project.status}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={project.status === 'active' ? 'success' : 'secondary'}>
+                        {project.status}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        title="Open Project Hub"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/projects/${project._id}/hub`)
+                        }}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

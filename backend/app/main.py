@@ -8,6 +8,7 @@ from app.config.logging_config import setup_logging
 from app.infrastructure.database.mongodb import connect_to_mongodb, close_mongodb_connection, ensure_indexes
 from app.infrastructure.database.redis import connect_to_redis, close_redis_connection
 from app.api.v1.api import api_router
+from app.api.v2.api import api_v2_router
 from app.domain.exceptions import DomainError
 from app.middleware import RateLimitMiddleware
 
@@ -53,6 +54,7 @@ async def domain_error_handler(request: Request, exc: DomainError):
 app.add_middleware(RateLimitMiddleware)
 
 app.include_router(api_router)
+app.include_router(api_v2_router)
 
 
 @app.get("/")
