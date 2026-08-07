@@ -5,6 +5,7 @@ from app.schemas.client import ClientCreateRequest, ClientUpdateRequest, ClientR
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.client_service import ClientService
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.infrastructure.di.container import get_service
 
 router = APIRouter()
 
@@ -14,8 +15,8 @@ async def create_client(
     body: ClientCreateRequest,
     user: User = Depends(require_permission("client:create")),
     org_id: str = Depends(get_current_org),
+    svc: ClientService = Depends(get_service(ClientService)),
 ):
-    svc = ClientService()
     client = await svc.create_client(body.model_dump(exclude_unset=True), org_id, user.id)
     return ClientResponse(**client.model_dump(by_alias=True))
 
@@ -25,8 +26,8 @@ async def list_clients(
     skip: int = 0, limit: int = 100,
     user: User = Depends(require_permission("client:read")),
     org_id: str = Depends(get_current_org),
+    svc: ClientService = Depends(get_service(ClientService)),
 ):
-    svc = ClientService()
     clients = await svc.list_clients(org_id, skip=skip, limit=limit)
     items = [ClientResponse(**c.model_dump(by_alias=True)) for c in clients]
     return PaginatedResponse(items=items, total=len(items), skip=skip, limit=limit)
@@ -36,8 +37,8 @@ async def list_clients(
 async def get_client(
     client_id: str,
     user: User = Depends(require_permission("client:read")),
+    svc: ClientService = Depends(get_service(ClientService)),
 ):
-    svc = ClientService()
     try:
         client = await svc.get_client(client_id)
         if client.organization_id != user.organization_id:
@@ -51,8 +52,8 @@ async def get_client(
 async def update_client(
     client_id: str, body: ClientUpdateRequest,
     user: User = Depends(require_permission("client:update")),
+    svc: ClientService = Depends(get_service(ClientService)),
 ):
-    svc = ClientService()
     try:
         client = await svc.update_client(client_id, body.model_dump(exclude_unset=True))
         if client.organization_id != user.organization_id:
@@ -66,8 +67,8 @@ async def update_client(
 async def delete_client(
     client_id: str,
     user: User = Depends(require_permission("client:delete")),
+    svc: ClientService = Depends(get_service(ClientService)),
 ):
-    svc = ClientService()
     try:
         client = await svc.get_client(client_id)
         if client.organization_id != user.organization_id:

@@ -10,13 +10,16 @@ from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from app.api.deps import get_current_user
+from app.infrastructure.di.container import get_service
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
-async def register(body: RegisterRequest):
-    auth_service = AuthService()
+async def register(
+    body: RegisterRequest,
+    auth_service: AuthService = Depends(get_service(AuthService)),
+):
     try:
         user, org, access_token, refresh_token = await auth_service.register(
             name=body.name,
@@ -45,8 +48,10 @@ async def register(body: RegisterRequest):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(body: LoginRequest):
-    auth_service = AuthService()
+async def login(
+    body: LoginRequest,
+    auth_service: AuthService = Depends(get_service(AuthService)),
+):
     try:
         user, org, access_token, refresh_token = await auth_service.login(
             email=body.email,
@@ -73,8 +78,11 @@ async def login(body: LoginRequest):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshTokenRequest, request: Request):
-    auth_service = AuthService()
+async def refresh(
+    body: RefreshTokenRequest,
+    request: Request,
+    auth_service: AuthService = Depends(get_service(AuthService)),
+):
     try:
         access_token, refresh_token = await auth_service.refresh_token(
             body.refresh_token,
@@ -106,8 +114,11 @@ async def get_me(user: User = Depends(get_current_user)):
 
 
 @router.put("/me", response_model=UserResponse)
-async def update_me(body: UserUpdateRequest, user: User = Depends(get_current_user)):
-    user_service = UserService()
+async def update_me(
+    body: UserUpdateRequest,
+    user: User = Depends(get_current_user),
+    user_service: UserService = Depends(get_service(UserService)),
+):
     updated = await user_service.update_user(
         user_id=user.id,
         name=body.name,
@@ -127,8 +138,11 @@ async def update_me(body: UserUpdateRequest, user: User = Depends(get_current_us
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(body: RefreshTokenRequest | None = None, user: User = Depends(get_current_user)):
-    auth_service = AuthService()
+async def logout(
+    body: RefreshTokenRequest | None = None,
+    user: User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_service(AuthService)),
+):
     if body and body.refresh_token:
         await auth_service.logout(body.refresh_token)
     return MessageResponse(message="Logged out successfully")

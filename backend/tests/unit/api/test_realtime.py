@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.domain.entities.user import User
 from app.api.v1.realtime import router, get_sse_user
+from app.infrastructure.di import container as di_container
+from app.services.generated_proposal_service import GeneratedProposalService
 
 
 class FakeTailer:
@@ -48,9 +50,16 @@ class FakeUser(User):
         return True
 
 
-def make_client(monkeypatch):
+def make_client(monkeypatch, proposal_svc=FakeProposalService):
     monkeypatch.setattr("app.api.v1.realtime.ProposalEventTailer", FakeTailer)
-    monkeypatch.setattr("app.api.v1.realtime.GeneratedProposalService", FakeProposalService)
+    monkeypatch.setattr(
+        di_container.container,
+        "_factories",
+        {
+            **di_container.container._factories,
+            GeneratedProposalService: lambda: proposal_svc(),
+        },
+    )
 
     app = FastAPI()
     app.include_router(router)
@@ -93,12 +102,10 @@ def test_stream_requires_owner_org(monkeypatch):
 
 
 def test_stream_missing_proposal_404(monkeypatch):
-    client = make_client(monkeypatch)
-
     class MissingProposalService:
         async def get_proposal(self, proposal_id):
             return None
 
-    monkeypatch.setattr("app.api.v1.realtime.GeneratedProposalService", MissingProposalService)
+    client = make_client(monkeypatch, proposal_svc=MissingProposalService)
     with client.stream("GET", "/proposals/def456/events") as r:
         assert r.status_code == 404

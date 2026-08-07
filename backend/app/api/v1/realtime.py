@@ -13,6 +13,7 @@ from app.infrastructure.auth.jwt import verify_access_token
 from app.infrastructure.events.streams import ProposalEventTailer
 from app.services.auth_service import AuthService
 from app.services.generated_proposal_service import GeneratedProposalService
+from app.infrastructure.di.container import get_service
 
 logger = logging.getLogger("proposalcraft.realtime_router")
 
@@ -22,7 +23,10 @@ HEARTBEAT_SECONDS = 15
 MAX_STREAM_SECONDS = 40 * 60
 
 
-async def get_sse_user(request: Request) -> User:
+async def get_sse_user(
+    request: Request,
+    auth_service: AuthService = Depends(get_service(AuthService)),
+) -> User:
     token = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.lower().startswith("bearer "):
@@ -39,7 +43,7 @@ async def get_sse_user(request: Request) -> User:
     except TokenInvalidError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = await AuthService().get_current_user(payload.get("sub"))
+    user = await auth_service.get_current_user(payload.get("sub"))
     if not user or user.status != "active":
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
@@ -49,11 +53,11 @@ async def get_sse_user(request: Request) -> User:
 async def stream_proposal_events(
     proposal_id: str,
     user: User = Depends(get_sse_user),
+    svc: GeneratedProposalService = Depends(get_service(GeneratedProposalService)),
 ):
     if not user.has_permission("proposal:read"):
         raise HTTPException(status_code=403, detail="Missing permission: proposal:read")
 
-    svc = GeneratedProposalService()
     try:
         doc = await svc.get_proposal(proposal_id)
     except Exception:

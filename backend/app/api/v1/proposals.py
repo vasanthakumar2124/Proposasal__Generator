@@ -15,6 +15,7 @@ from app.services.generated_proposal_service import GeneratedProposalService
 from app.export.service import export_service
 from app.export.normalize import normalize_proposal
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.infrastructure.di.container import get_service
 from app.workers.tasks import generate_proposal_task
 from app.billing.limits import enforce_proposal_limit
 
@@ -26,8 +27,8 @@ async def create_proposal(
     body: ProposalCreateRequest,
     user: User = Depends(require_permission("proposal:create")),
     org_id: str = Depends(get_current_org),
+    svc: ProposalService = Depends(get_service(ProposalService)),
 ):
-    svc = ProposalService()
     proposal = await svc.create_proposal(body.model_dump(exclude_unset=True), org_id, user.id)
     return ProposalResponse(**proposal.model_dump(by_alias=True))
 
@@ -38,8 +39,8 @@ async def list_proposals(
     status: Optional[str] = Query(None),
     user: User = Depends(require_permission("proposal:read")),
     org_id: str = Depends(get_current_org),
+    svc: ProposalService = Depends(get_service(ProposalService)),
 ):
-    svc = ProposalService()
     proposals = await svc.list_proposals(org_id, skip=skip, limit=limit, status=status)
     items = [ProposalResponse(**p.model_dump(by_alias=True)) for p in proposals]
     return PaginatedResponse(items=items, total=len(items), skip=skip, limit=limit)
@@ -49,15 +50,15 @@ async def list_proposals(
 async def get_proposal(
     proposal_id: str,
     user: User = Depends(require_permission("proposal:read")),
+    svc: ProposalService = Depends(get_service(ProposalService)),
+    gen_svc: GeneratedProposalService = Depends(get_service(GeneratedProposalService)),
 ):
-    svc = ProposalService()
     try:
         proposal = await svc.get_proposal(proposal_id)
         if proposal.organization_id != user.organization_id:
             raise HTTPException(status_code=403, detail="Access denied")
         return ProposalResponse(**proposal.model_dump(by_alias=True))
     except Exception:
-        gen_svc = GeneratedProposalService()
         gen = await gen_svc.get_proposal(proposal_id)
         if not gen or gen.get("organization_id") != user.organization_id:
             raise HTTPException(status_code=404, detail="Proposal not found")
@@ -90,8 +91,8 @@ async def get_proposal(
 async def update_proposal(
     proposal_id: str, body: ProposalUpdateRequest,
     user: User = Depends(require_permission("proposal:update")),
+    svc: ProposalService = Depends(get_service(ProposalService)),
 ):
-    svc = ProposalService()
     try:
         proposal = await svc.update_proposal(proposal_id, body.model_dump(exclude_unset=True))
         if proposal.organization_id != user.organization_id:
@@ -105,8 +106,8 @@ async def update_proposal(
 async def delete_proposal(
     proposal_id: str,
     user: User = Depends(require_permission("proposal:delete")),
+    svc: ProposalService = Depends(get_service(ProposalService)),
 ):
-    svc = ProposalService()
     try:
         proposal = await svc.get_proposal(proposal_id)
         if proposal.organization_id != user.organization_id:
@@ -122,11 +123,11 @@ async def export_proposal(
     proposal_id: str,
     fmt: str,
     user: User = Depends(require_permission("proposal:read")),
+    gen_svc: GeneratedProposalService = Depends(get_service(GeneratedProposalService)),
 ):
     if fmt not in ("html", "pdf", "docx", "pptx"):
         raise HTTPException(status_code=400, detail=f"Unsupported format: {fmt}")
 
-    gen_svc = GeneratedProposalService()
     gen = await gen_svc.get_proposal(proposal_id)
     if not gen or gen.get("organization_id") != user.organization_id:
         raise HTTPException(status_code=404, detail="Proposal not found")
@@ -158,9 +159,9 @@ async def generate_proposal(
     user: User = Depends(require_permission("proposal:create")),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     org_id: str = Depends(get_current_org),
+    svc: GeneratedProposalService = Depends(get_service(GeneratedProposalService)),
 ):
     await enforce_proposal_limit(org_id)
-    svc = GeneratedProposalService()
     doc = await svc.start_generation(
         client_input=body.get("client_input", ""),
         domain=body.get("domain"),
@@ -196,8 +197,8 @@ async def generate_proposal(
 async def update_section(
     proposal_id: str, section_name: str, body: dict,
     user: User = Depends(require_permission("proposal:update")),
+    svc: ProposalService = Depends(get_service(ProposalService)),
 ):
-    svc = ProposalService()
     try:
         proposal = await svc.update_section(proposal_id, section_name, body)
         if proposal.organization_id != user.organization_id:

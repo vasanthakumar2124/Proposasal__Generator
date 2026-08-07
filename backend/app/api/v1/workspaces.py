@@ -5,6 +5,7 @@ from app.schemas.workspace import WorkspaceCreateRequest, WorkspaceUpdateRequest
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.workspace_service import WorkspaceService
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.infrastructure.di.container import get_service
 
 router = APIRouter()
 
@@ -14,8 +15,8 @@ async def create_workspace(
     body: WorkspaceCreateRequest,
     user: User = Depends(require_permission("workspace:create")),
     org_id: str = Depends(get_current_org),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     ws = await svc.create_workspace(
         name=body.name,
         description=body.description,
@@ -36,8 +37,8 @@ async def list_workspaces(
     limit: int = 100,
     user: User = Depends(require_permission("workspace:read")),
     org_id: str = Depends(get_current_org),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     workspaces = await svc.list_workspaces(org_id, skip=skip, limit=limit)
     items = [WorkspaceResponse(
         _id=w.id, organization_id=w.organization_id, name=w.name,
@@ -52,8 +53,8 @@ async def list_workspaces(
 async def get_workspace(
     workspace_id: str,
     user: User = Depends(require_permission("workspace:read")),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     try:
         ws = await svc.get_workspace(workspace_id)
     except Exception as e:
@@ -75,8 +76,8 @@ async def update_workspace(
     workspace_id: str,
     body: WorkspaceUpdateRequest,
     user: User = Depends(require_permission("workspace:update")),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     try:
         ws = await svc.update_workspace(
             workspace_id=workspace_id,
@@ -101,8 +102,8 @@ async def update_workspace(
 async def delete_workspace(
     workspace_id: str,
     user: User = Depends(require_permission("workspace:delete")),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     try:
         ws = await svc.get_workspace(workspace_id)
         if ws.organization_id != user.organization_id:
@@ -118,8 +119,8 @@ async def add_member(
     workspace_id: str,
     user_id: str,
     user: User = Depends(require_permission("workspace:update")),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     try:
         ws = await svc.get_workspace(workspace_id)
         if ws.organization_id != user.organization_id:
@@ -140,8 +141,8 @@ async def remove_member(
     workspace_id: str,
     user_id: str,
     user: User = Depends(require_permission("workspace:update")),
+    svc: WorkspaceService = Depends(get_service(WorkspaceService)),
 ):
-    svc = WorkspaceService()
     try:
         ws = await svc.get_workspace(workspace_id)
         if ws.organization_id != user.organization_id:

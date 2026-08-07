@@ -7,6 +7,7 @@ from app.schemas.organization import AddMemberRequest, MemberResponse
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.member_service import MemberService
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.infrastructure.di.container import get_service
 
 router = APIRouter()
 
@@ -16,8 +17,8 @@ async def invite_member(
     body: AddMemberRequest,
     user: User = Depends(require_permission("member:create")),
     org_id: str = Depends(get_current_org),
+    svc: MemberService = Depends(get_service(MemberService)),
 ):
-    svc = MemberService()
     try:
         member = await svc.add_member(
             org_id=org_id,
@@ -42,8 +43,8 @@ async def list_members(
     limit: int = 100,
     user: User = Depends(require_permission("member:read")),
     org_id: str = Depends(get_current_org),
+    svc: MemberService = Depends(get_service(MemberService)),
 ):
-    svc = MemberService()
     members = await svc.list_members(org_id, skip=skip, limit=limit)
     items = [
         MemberResponse(
@@ -62,12 +63,12 @@ async def update_member_role(
     body: dict,
     user: User = Depends(require_permission("member:update")),
     org_id: str = Depends(get_current_org),
+    svc: MemberService = Depends(get_service(MemberService)),
 ):
     role = body.get("role")
     if not role:
         raise HTTPException(status_code=400, detail="Role is required")
 
-    svc = MemberService()
     try:
         member = await svc.update_member_role(
             org_id=org_id,
@@ -90,8 +91,8 @@ async def remove_member(
     user_id: str,
     user: User = Depends(require_permission("member:delete")),
     org_id: str = Depends(get_current_org),
+    svc: MemberService = Depends(get_service(MemberService)),
 ):
-    svc = MemberService()
     try:
         await svc.remove_member(
             org_id=org_id,

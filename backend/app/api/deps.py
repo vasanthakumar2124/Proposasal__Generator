@@ -7,6 +7,7 @@ from app.domain.exceptions import TokenExpiredError, TokenInvalidError
 from app.infrastructure.auth.jwt import verify_access_token
 from app.services.auth_service import AuthService
 from app.config.constants import DEFAULT_PERMISSIONS
+from app.infrastructure.di.container import get_service
 
 security = HTTPBearer(auto_error=False)
 
@@ -14,8 +15,8 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     x_api_key: Optional[str] = Header(None),
+    auth_service: AuthService = Depends(get_service(AuthService)),
 ) -> User:
-    auth_service = AuthService()
 
     if credentials:
         token = credentials.credentials

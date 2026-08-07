@@ -6,6 +6,7 @@ from app.schemas.organization import MemberResponse
 from app.schemas.common import PaginatedResponse
 from app.services.user_service import UserService
 from app.api.deps import get_current_user, get_current_org, require_permission
+from app.infrastructure.di.container import get_service
 
 router = APIRouter()
 
@@ -31,8 +32,8 @@ async def list_members(
     limit: int = 100,
     org_id: str = Depends(get_current_org),
     user: User = Depends(require_permission("member:read")),
+    user_service: UserService = Depends(get_service(UserService)),
 ):
-    user_service = UserService()
     members = await user_service.list_organization_members(org_id, skip=skip, limit=limit)
     items = [
         MemberResponse(
