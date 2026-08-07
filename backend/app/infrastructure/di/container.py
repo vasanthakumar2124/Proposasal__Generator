@@ -7,6 +7,7 @@ from app.services.member_service import MemberService
 from app.services.organization_service import OrganizationService
 from app.services.project_service import ProjectService
 from app.services.proposal_service import ProposalService
+from app.services.proposal_version_service import ProposalVersionService
 from app.services.user_service import UserService
 from app.services.workspace_service import WorkspaceService
 
@@ -18,6 +19,7 @@ ServiceType = (
     | OrganizationService
     | ProjectService
     | ProposalService
+    | ProposalVersionService
     | UserService
     | WorkspaceService
 )
@@ -52,6 +54,7 @@ container.register(MemberService, lambda: MemberService())
 container.register(OrganizationService, lambda: OrganizationService())
 container.register(ProjectService, lambda: ProjectService())
 container.register(ProposalService, lambda: ProposalService())
+container.register(ProposalVersionService, lambda: ProposalVersionService())
 container.register(UserService, lambda: UserService())
 container.register(WorkspaceService, lambda: WorkspaceService())
 

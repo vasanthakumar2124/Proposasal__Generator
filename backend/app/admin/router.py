@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database.mongodb import db
 from app.domain.entities.user import User
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import require_permission
 
 logger = logging.getLogger("proposalcraft.admin.router")
 

@@ -15,7 +15,6 @@ from app.domain.interfaces import UserRepository, OrganizationRepository
 from app.infrastructure.auth.jwt import (
     create_access_token,
     create_refresh_token,
-    verify_access_token,
     verify_refresh_token,
 )
 from app.infrastructure.auth.refresh_store import refresh_token_store

@@ -53,3 +53,13 @@ class PlanLimitExceededError(DomainError):
 
 class MultiTenantViolationError(DomainError):
     pass
+
+
+class InvalidStateTransitionError(DomainError):
+    def __init__(self, entity_type: str, current: str, target: str):
+        self.entity_type = entity_type
+        self.current = current
+        self.target = target
+        super().__init__(
+            f"Invalid {entity_type} transition: {current} -> {target}"
+        )

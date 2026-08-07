@@ -7,6 +7,8 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { ArrowLeft, FileText, Download, FileDown, AlertTriangle } from 'lucide-react'
+import VersionHistory from '../components/proposal/VersionHistory'
+import StatusControl from '../components/proposal/StatusControl'
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -154,6 +156,7 @@ export default function ProposalDetail() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <StatusControl proposalId={id!} status={proposal.status} />
         <Button variant="outline" size="sm" onClick={() => handleExport('html')} disabled={exporting === 'html'}>
           <FileText className="h-4 w-4 mr-1" /> HTML
         </Button>
@@ -212,6 +215,8 @@ export default function ProposalDetail() {
           ))
         )}
       </div>
+
+      <VersionHistory proposalId={id!} />
     </div>
   )
 }

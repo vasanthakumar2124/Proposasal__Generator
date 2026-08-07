@@ -220,8 +220,20 @@ class GeneratedProposalService:
             )
         )
         await asyncio.sleep(0.05)
-        return {**doc, "_id": doc_id}
+        try:
+            from app.services.proposal_version_service import ProposalVersionService
 
+            await ProposalVersionService().create_version(
+                doc_id,
+                org_id,
+                user_id,
+                title=title,
+                sections=proposal_content if isinstance(proposal_content, dict) else {"content": str(proposal_content)},
+                note="generated",
+            )
+        except Exception as e:
+            logger.warning("Version snapshot failed for %s: %s", doc_id, e)
+        return {**doc, "_id": doc_id}
     async def list_proposals(self, org_id: str) -> list[dict]:
         cursor = (await self._collection()).find(
             {"organization_id": org_id}
